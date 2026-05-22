@@ -1,0 +1,62 @@
+[
+  {
+    "id": "c1",
+    "title": "Database Schema & Legacy Data Migration",
+    "category": "Data Migration",
+    "risk": "High",
+    "status": "inprogress",
+    "description": "CCTNS 1.0 states use regional databases with varying local schema extensions and missing integrity constraints. Character encoding (e.g., local state fonts) is not standardized, causing corrupted text when transferring to the central database.",
+    "impact": "Data loss during ingestion, unsearchable records (e.g. criminal names stored in local character encodings like KrutiDev instead of Unicode UTF-8), and broken foreign keys in CAS database.",
+    "solution": "Establish an automated ETL (Extract, Transform, Load) pipeline using standard Python schemas or Node streams. Convert font mappings to Unicode UTF-8 systematically and implement transaction logs for schema mapping validation.",
+    "oldCode": "// CCTNS 1.0: Legacy JDBC with direct SQL queries and local font mappings\npublic void insertRecord(Connection conn, String name, String detail) throws Exception {\n    // No validation, local charset conversion missing\n    String regionalName = convertToLegacyFont(name);\n    Statement stmt = conn.createStatement();\n    String query = \"INSERT INTO t_fir_details (fir_id, name, desc) VALUES (nextval('fir_seq'), '\" + regionalName + \"', '\" + detail + \"')\";\n    stmt.executeUpdate(query);\n}",
+    "newCode": "// CCTNS 2.0: Clean ORM, standard UTF-8 encoding, and strict model validations\nconst saveFIR = async (firData) => {\n  // Encoded in Standard UTF-8, validated schemas, safe parameters\n  const validatedFIR = new FIRModel({\n    firNo: firData.firNo,\n    complainantName: Buffer.from(firData.complainantName, 'utf-8').toString(),\n    offenceDetails: firData.offenceDetails,\n    timestamp: new Date()\n  });\n  return await validatedFIR.save();\n};"
+  },
+  {
+    "id": "c2",
+    "title": "Offline-Online Data Sync & Conflicts",
+    "category": "Offline Sync",
+    "risk": "High",
+    "status": "todo",
+    "description": "Remote police stations in hilly or rural areas face frequent internet outages. In CCTNS 1.0, data is updated locally and synchronized via daily/weekly batches or offline media (CDs/USBs). In CCTNS 2.0, systems must be online-first but handle offline state transparently.",
+    "impact": "If two stations offline-register investigations referencing the same suspect or record, syncing them triggers major conflict errors and duplicate records in the central State Data Centre (SDC).",
+    "solution": "Implement a Progressive Offline sync engine using a local IndexDB cache on the client side, and a background sync service worker. Use UUIDs (rather than auto-incrementing serial IDs) to prevent ID collisions, and CRDT/logical timestamping to resolve conflicts.",
+    "oldCode": "-- CCTNS 1.0: Auto-incrementing Integer Primary Keys\nCREATE TABLE t_fir (\n    fir_serial_id SERIAL PRIMARY KEY, -- Triggers sync conflicts across stations\n    station_code VARCHAR(10),\n    created_at TIMESTAMP\n);",
+    "newCode": "-- CCTNS 2.0: Globally Unique Identifiers (UUIDs)\nCREATE TABLE t_fir (\n    fir_uuid UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Prevents ID conflicts completely\n    station_code VARCHAR(10),\n    created_at TIMESTAMP WITH TIME ZONE\n);"
+  },
+  {
+    "id": "c3",
+    "title": "ICJS System Interoperability API",
+    "category": "ICJS Integration",
+    "risk": "Medium",
+    "status": "todo",
+    "description": "CCTNS 2.0 requires seamless communication with external pillars of the Inter-operable Criminal Justice System (ICJS): Prisons (e-Prisons), Courts (e-Courts), Prosecution, and Forensic Labs. CCTNS 1.0 lacks real-time API integrations.",
+    "impact": "Manual file transfers, delayed access to criminal records in court hearings, slow forensic report updates, and high human error rates during data entry.",
+    "solution": "Develop a microservices integration gateway using secure REST/gRPC endpoints. Implement OAuth2 authentication with JWT validation, along with a message queue (RabbitMQ/Kafka) to buffer transactions when external endpoints are down.",
+    "oldCode": "// CCTNS 1.0: Manual CSV export & daily SFTP upload to courts server\npublic void exportToCourts() {\n    List<FIR> firList = database.getAllFIRs();\n    File csvFile = generateCSV(firList);\n    SFTPClient.upload(\"sftp://courts.gov.in/incoming/\", csvFile);\n    // Risk: No immediate receipt confirmation, file formatting issues\n}",
+    "newCode": "// CCTNS 2.0: Real-time asynchronous API sync via Message Queue\nconst publishToICJS = async (caseData) => {\n  const message = JSON.stringify({ type: 'NEW_FIR', payload: caseData });\n  // Publish to RabbitMQ / Kafka for reliable delivery\n  await rabbitMQChannel.sendToQueue('icjs-court-sync', Buffer.from(message), {\n    persistent: true,\n    headers: { 'Authorization': `Bearer ${accessToken}` }\n  });\n  console.log('Case dispatched to ICJS sync pipeline.');\n};"
+  },
+  {
+    "id": "c4",
+    "title": "Complex UI & Training Resistance",
+    "category": "UI/UX & Training",
+    "risk": "Medium",
+    "status": "inprogress",
+    "description": "CCTNS 1.0 has a heavy, desktop-oriented UI with bloated input fields (often 100+ parameters to register an FIR). Police constables with basic technical literacy find it extremely difficult to navigate.",
+    "impact": "High error rates, delays in FIR registration (takes hours instead of minutes), and resistance to using the system, forcing officers to write on paper first.",
+    "solution": "Redesign the frontend into a responsive web application with step-by-step form wizards. Introduce regional language translation support (bilingual input), smart search suggestions, auto-filling fields, and integrated tooltips/interactive guide systems.",
+    "oldCode": "<!-- CCTNS 1.0: Giant JSP page with endless nested tables and absolute layouts -->\n<table>\n  <tr>\n    <td>Name:</td><td><input type=\"text\" name=\"complainant_name\" /></td>\n    <td>Father's Name:</td><td><input type=\"text\" name=\"father_name\" /></td>\n    <!-- 80 more fields in a single page without logical grouping -->\n  </tr>\n</table>",
+    "newCode": "// CCTNS 2.0: Stepper component in React with contextual guides & fields validation\nconst FIRRegistrationWizard = () => {\n  const [step, setStep] = useState(1);\n  return (\n    <div className=\"stepper-container\">\n      <div className=\"step-indicators\">\n        <span className={step >= 1 ? \"active\" : \"\"}>Complainant Info</span>\n        <span className={step >= 2 ? \"active\" : \"\"}>Incident Details</span>\n        <span className={step >= 3 ? \"active\" : \"\"}>Accused Details</span>\n      </div>\n      {step === 1 && <ComplainantForm onNext={() => setStep(2)} />}\n      {step === 2 && <IncidentDetailsForm onNext={() => setStep(3)} />}\n      {step === 3 && <AccusedForm onSubmit={submitFIR} />}\n    </div>\n  );\n};"
+  },
+  {
+    "id": "c5",
+    "title": "Security, Audit Logging & Tampering",
+    "category": "Security & Auditing",
+    "risk": "High",
+    "status": "resolved",
+    "description": "CCTNS 1.0 stores application logs in simple text files or standard database tables without cryptographic verification. There is a risk of database administrators or attackers altering case files and updating timestamps directly in the database.",
+    "impact": "Compromised legal integrity of FIRs, lack of chain-of-custody tracking for electronic evidence, and vulnerability to inside manipulation.",
+    "solution": "Implement immutable auditing. Every case state change (created, modified, viewed) is digitally signed, and audit records are appended with SHA-256 block-hashes (forming a chain). Restrict direct database access through strict REST APIs with Multi-Factor Authentication (MFA).",
+    "oldCode": "# CCTNS 1.0: Simple plain text log file - vulnerable to editing or truncation\nwith open(\"/var/log/cctns_app.log\", \"a\") as log_file:\n    log_file.write(f\"[{datetime.now()}] User {username} updated FIR {fir_id}\\n\")",
+    "newCode": "// CCTNS 2.0: Cryptographically linked immutable ledger audit trail\nconst createAuditLog = async (userId, action, recordId, previousHash) => {\n  const timestamp = new Date().toISOString();\n  const payload = `${userId}|${action}|${recordId}|${timestamp}|${previousHash}`;\n  \n  // Calculate SHA-256 hash\n  const currentHash = crypto.createHash('sha256').update(payload).digest('hex');\n  \n  const logEntry = new AuditLogModel({\n    userId, action, recordId, timestamp, previousHash, currentHash\n  });\n  await logEntry.save(); // Tampering can be immediately detected if chain breaks\n};"
+  }
+]
