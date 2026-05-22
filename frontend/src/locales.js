@@ -11,7 +11,8 @@ export const locales = {
       footerDesc: "Frontend/Backend separated for modular edits.",
       loggedOfficer: "Logged In Officer",
       role: "Role",
-      logout: "🚪 Safe Log Out"
+      logout: "🚪 Safe Log Out",
+      helpGuide: "❔ Help & Reference"
     },
     header: {
       govBadge: "GOVERNMENT OF INDIA",
@@ -144,6 +145,87 @@ export const locales = {
       btnReject: "Reject",
       successApprove: "Officer {email} registration successfully approved!",
       successReject: "Officer {email} registration successfully rejected!"
+    },
+    help: {
+      title: "Help & Reference Guide",
+      subtitle: "Comprehensive guide to CCTNS 1.0 → 2.0 system transitions, database differences, local fonts, and configurations.",
+      tabs: {
+        overview: "Overview & Transitions",
+        schema: "Database Schema Mapper",
+        font: "Font Converter Playground",
+        config: "System Config & Security",
+        faq: "Frequently Asked Questions"
+      },
+      overview: {
+        title: "CCTNS 1.0 to 2.0 Architectural Gaps",
+        desc: "Upgrading from the legacy desktop monolith (CCTNS 1.0) to a modern web-first microservices architecture (CCTNS 2.0) resolves synchronization issues, data corruption, and security flaws. Here are the core pillars:",
+        p1Title: "1. Relational to Distributed Cache Sync",
+        p1Desc: "CCTNS 1.0 stores data in local database tables which are batched overnight. CCTNS 2.0 uses Redis caches for quick UI read operations and publishes state transitions to centralized databases via queue brokers (RabbitMQ/Kafka) for real-time consistency.",
+        p2Title: "2. Encoding and Font Modernization",
+        p2Desc: "Legacy Hindi text typed in KrutiDev or Devlys fonts in CCTNS 1.0 is highly prone to corruption. CCTNS 2.0 strictly enforces UTF-8 Unicode characters. All offline inputs must be sanitized using conversion libraries.",
+        p3Title: "3. Secure Cryptographic Audits",
+        p3Desc: "CCTNS 2.0 signs every transaction hash with SHA-256 and records changes in an audit chain. System operations require strict Multi-Factor Authentication (MFA) via official credentials or biometric devices."
+      },
+      schema: {
+        title: "Interactive DB Schema Mapper",
+        desc: "Select a legacy CCTNS 1.0 table to see its corresponding modern CCTNS 2.0 schema, key upgrades, and data mapping strategy.",
+        selectPlaceholder: "Select a database entity...",
+        tables: {
+          fir: {
+            name: "FIR Details Table (FIR_DTLS)",
+            oldSchema: "FIR_ID (int auto_increment), DISTRICT_CD (varchar), POLICE_STN_CD (varchar), COMPLAINANT_NAME (varchar), ACT_SECTION (varchar), STATUS (varchar)",
+            newSchema: "id (uuid PRIMARY KEY), district_code (varchar), police_station_id (uuid), complainant (jsonb containing profile, aadhaar_hash), legal_acts (jsonb array), current_status (enum), integrity_hash (varchar), created_by_officer (uuid)",
+            mapping: "The auto-increment FIR_ID is replaced with a universally unique UUID to avoid collisions during offline station operations. The acts and complainant columns are converted to unstructured JSONB schemas, allowing highly flexible records for multiple acts/sections without requiring complex table joins. A SHA-256 integrity hash is attached to prevent local tampering."
+          },
+          accused: {
+            name: "Accused Profiles Table (ACCUSED_INFO)",
+            oldSchema: "ACC_ID (int), FIR_ID (int), ACC_NAME (varchar), AGE (int), BIOMETRIC_FILE (blob/path)",
+            newSchema: "id (uuid PRIMARY KEY), fir_id (uuid REFERENCES fir), profile_details (jsonb), biometric_fingerprint_hash (varchar), encrypted_personal_info (varchar), status (enum)",
+            mapping: "Personally Identifiable Information (PII) is encrypted at rest using AES-256 keys. The biometric blob is replaced with a hash matched against central Aadhaar databases, avoiding bulky database binary storage. Relation constraints use foreign keys linked with the primary FIR UUID."
+          },
+          evidence: {
+            name: "Evidence Documents (EVI_ATTACHMENTS)",
+            oldSchema: "EVI_ID (int), CASE_NO (varchar), FILE_PATH (varchar), UPLOADED_DATE (date)",
+            newSchema: "id (uuid PRIMARY KEY), case_id (uuid), storage_bucket_url (varchar), file_mime_type (varchar), sha256_checksum (varchar), digitally_signed_by (uuid)",
+            mapping: "Instead of local network file paths, evidence is uploaded directly to a secure, decentralized storage bucket. Each evidence object contains a digital signature from the investigating officer and a sha256_checksum to ensure chain-of-custody validity in courts."
+          }
+        }
+      },
+      font: {
+        title: "Bilingual Legacy Font Converter Utility",
+        desc: "Police stations historically recorded FIRs in Hindi using non-standard KrutiDev / Devlys fonts. Standardizing this to UTF-8 Unicode prevents text corruption during search operations and ICJS queries.",
+        inputLabel: "Paste Legacy KrutiDev Font Text Here:",
+        inputPlaceholder: "e.g. jkt_k (for 'राकेश' or similar KrutiDev keyboard codes)",
+        outputLabel: "Dynamic Unicode UTF-8 Output:",
+        convertedText: "Converted Text",
+        charCount: "Character Count",
+        instructionsTitle: "How to use local conversion in code:",
+        instructionsDesc: "Use our backend Font Sanitation utility to map character arrays. In your controllers, import the `KrutiDevToUnicode` module before parsing request payloads. Database saves must be in standard UTF-8."
+      },
+      config: {
+        title: "System Configurations & MFA Protocols",
+        desc: "Deploying CCTNS 2.0 police nodes requires setting system parameters. Incorrect properties will halt offline sync queues and lock officer biometrics.",
+        jvmTitle: "JVM Memory & GC Options",
+        jvmParams: "-Xms4g -Xmx8g -XX:+UseG1GC -Dfile.encoding=UTF-8",
+        jvmDesc: "Prevents OutOfMemory errors during large attachment downloads.",
+        syncTitle: "Offline Sync Interval Parameters",
+        syncParams: "cctns.sync.interval=300000ms (5 mins)\ncctns.sync.retry.max=5",
+        syncDesc: "Controls the batch synchronization frequency to the State Data Center (SDC).",
+        mfaTitle: "Biometric & MFA Integration",
+        mfaParams: "cctns.mfa.provider=UIDAI-Aadhaar\ncctns.mfa.device.strict=true",
+        mfaDesc: "Enforces biometric fingerprint scanners for all criminal ledger alterations."
+      },
+      faq: {
+        title: "Frequently Asked Questions",
+        q1: "What happens if a police station loses internet connectivity?",
+        a1: "CCTNS 2.0 operates in a local offline-first mode. All records, FIR registrations, and evidence checksums are written to local SQLite caches. Once the network connectivity (>= 2 Mbps) is restored, the sync manager automatically reconciles data with the SDC database using conflict-resolution rules.",
+        q2: "Why is KrutiDev to Unicode conversion mandatory?",
+        a2: "CCTNS 1.0 used non-Unicode local layouts, making searches across national platforms (like ICJS) impossible because the text was represented as raw Latin alphabet codes. Converting to Unicode standardizes the text so searches for 'राजेश' succeed across all state databases.",
+        q3: "How is data tampering prevented in CCTNS 2.0?",
+        a3: "Every transaction, case update, or evidence submission creates a cryptographic block signed with SHA-256. This is coupled with the officer's biometric digital signature. Any attempts to alter the local database directly will invalidate the audit chain, raising flags in the Command Center.",
+        q4: "Can standard users approve new registrations?",
+        a4: "No. Only Command Center Admins (role: admin) have access to the Approve Requests tab. They verify physical official credentials and approve new registrations before users can log in."
+      }
     }
   },
   hi: {
@@ -158,7 +240,8 @@ export const locales = {
       footerDesc: "आसान बदलावों के लिए फ्रंटएंड और बैकएंड कोड अलग किए गए हैं।",
       loggedOfficer: "लॉग इन अधिकारी",
       role: "भूमिका",
-      logout: "🚪 सुरक्षित लॉग आउट"
+      logout: "🚪 सुरक्षित लॉग आउट",
+      helpGuide: "❔ सहायता एवं निर्देश"
     },
     header: {
       govBadge: "भारत सरकार",
@@ -291,6 +374,87 @@ export const locales = {
       btnReject: "अस्वीकार करें",
       successApprove: "अधिकारी {email} का पंजीकरण सफलतापूर्वक स्वीकृत किया गया!",
       successReject: "अधिकारी {email} का पंजीकरण सफलतापूर्वक अस्वीकृत किया गया!"
+    },
+    help: {
+      title: "सहायता एवं निर्देश गाइड",
+      subtitle: "CCTNS 1.0 से 2.0 सिस्टम माइग्रेशन, डेटाबेस अंतर, स्थानीय फ़ॉन्ट और सिस्टम कॉन्फ़िगरेशन का विस्तृत विवरण।",
+      tabs: {
+        overview: "अवलोकन एवं बदलाव",
+        schema: "डेटाबेस स्कीमा मैपर",
+        font: "फ़ॉन्ट कनवर्टर टूल",
+        config: "सिस्टम कॉन्फ़िगरेशन",
+        faq: "अक्सर पूछे जाने वाले प्रश्न (FAQs)"
+      },
+      overview: {
+        title: "CCTNS 1.0 से 2.0 संरचनात्मक अंतर",
+        desc: "पुराने डेस्कटॉप सिस्टम (CCTNS 1.0) से आधुनिक वेब-आधारित माइक्रोसर्विसेज (CCTNS 2.0) में अपग्रेड करने से डेटा सिंक, फ़ॉन्ट विकृति और सुरक्षा की कमियों का समाधान होता है। मुख्य स्तंभ निम्नलिखित हैं:",
+        p1Title: "1. रिलेशनल से डिस्ट्रिब्यूटेड कैशे सिंक",
+        p1Desc: "CCTNS 1.0 डेटा को स्थानीय डेटाबेस में रखता था जो रात में सिंक होता था। CCTNS 2.0 तेजी से पढ़ने के लिए Redis कैशे का उपयोग करता है और वास्तविक समय की संगति के लिए RabbitMQ/Kafka जैसे मैसेज ब्रोकर के माध्यम से डेटा सिंक करता है।",
+        p2Title: "2. एन्कोडिंग और फ़ॉन्ट आधुनिकीकरण",
+        p2Desc: "CCTNS 1.0 में कृतिदेव या देवलीज़ फ़ॉन्ट्स में टाइप किए गए पुराने हिंदी टेक्स्ट में अक्षरों के बिगड़ने की अत्यधिक संभावना रहती थी। CCTNS 2.0 केवल UTF-8 यूनिकोड वर्णों को स्वीकार करता है। सभी ऑफलाइन डेटा को सिंक से पहले कनवर्ट किया जाना चाहिए।",
+        p3Title: "3. सुरक्षित क्रिप्टोग्राफिक ऑडिट",
+        p3Desc: "CCTNS 2.0 प्रत्येक ट्रांजैक्शन को SHA-256 से हैश करके एक सुरक्षित ऑडिट चेन में दर्ज करता है। किसी भी बदलाव के लिए आधिकारिक बायोमेट्रिक उपकरणों या ओटीपी प्रमाणीकरण (MFA) की आवश्यकता होती है।"
+      },
+      schema: {
+        title: "इंटरैक्टिव डेटाबेस स्कीमा मैपर",
+        desc: "विरासत CCTNS 1.0 टेबल चुनें और उसका संबंधित CCTNS 2.0 स्कीमा, मुख्य सुधार और डेटा मैपिंग नीति देखें।",
+        selectPlaceholder: "डेटाबेस एंटिटी चुनें...",
+        tables: {
+          fir: {
+            name: "प्राथमिकी विवरण टेबल (FIR_DTLS)",
+            oldSchema: "FIR_ID (int auto_increment), DISTRICT_CD (varchar), POLICE_STN_CD (varchar), COMPLAINANT_NAME (varchar), ACT_SECTION (varchar), STATUS (varchar)",
+            newSchema: "id (uuid PRIMARY KEY), district_code (varchar), police_station_id (uuid), complainant (jsonb profile, aadhaar_hash), legal_acts (jsonb array), current_status (enum), integrity_hash (varchar), created_by_officer (uuid)",
+            mapping: "ऑफ़लाइन पुलिस स्टेशन ऑपरेशन्स के दौरान आईडी के आपस में टकराने से बचने के लिए auto-increment FIR_ID को UUID से बदल दिया गया है। विभिन्न धाराओं और शिकायतकर्ताओं के रिकॉर्ड को आसान बनाने के लिए JSONB स्कीमा का उपयोग किया गया है जिससे टेबल जॉइन्स की जरूरत नहीं पड़ती। डेटा सुरक्षा के लिए SHA-256 हैश जोड़ा गया है।"
+          },
+          accused: {
+            name: "आरोपी विवरण टेबल (ACCUSED_INFO)",
+            oldSchema: "ACC_ID (int), FIR_ID (int), ACC_NAME (varchar), AGE (int), BIOMETRIC_FILE (blob/path)",
+            newSchema: "id (uuid PRIMARY KEY), fir_id (uuid REFERENCES fir), profile_details (jsonb), biometric_fingerprint_hash (varchar), encrypted_personal_info (varchar), status (enum)",
+            mapping: "व्यक्तिगत संवेदनशील डेटा (PII) को AES-256 कुंजियों का उपयोग करके एन्क्रिप्ट किया गया है। बायोमेट्रिक फ़ाइल को सीधे डेटाबेस में रखने के बजाय केंद्रीय आधार डेटाबेस से हैश मिलान किया जाता है। सभी संबंध UUID कुंजियों के माध्यम से जुड़े हैं।"
+          },
+          evidence: {
+            name: "साक्ष्य दस्तावेज टेबल (EVI_ATTACHMENTS)",
+            oldSchema: "EVI_ID (int), CASE_NO (varchar), FILE_PATH (varchar), UPLOADED_DATE (date)",
+            newSchema: "id (uuid PRIMARY KEY), case_id (uuid), storage_bucket_url (varchar), file_mime_type (varchar), sha256_checksum (varchar), digitally_signed_by (uuid)",
+            mapping: "स्थानीय नेटवर्क फ़ाइल पाथ के बजाय, सभी साक्ष्य सुरक्षित क्लाउड स्टोरेज बकेट पर संग्रहीत किए जाते हैं। प्रत्येक साक्ष्य में जांच अधिकारी के डिजिटल हस्ताक्षर और अदालतों में साक्ष्य की वैधता साबित करने के लिए sha256_checksum शामिल है।"
+          }
+        }
+      },
+      font: {
+        title: "विरासत फ़ॉन्ट यूनिकोड कनवर्टर टूल",
+        desc: "पुलिस थानों में ऐतिहासिक रूप से हिंदी में FIR दर्ज करने के लिए गैर-मानक कृतिदेव / देवलीज़ फ़ॉन्ट्स का उपयोग किया जाता था। राष्ट्रीय प्लेटफॉर्म (जैसे ICJS) पर खोज को सक्षम करने के लिए इसे UTF-8 यूनिकोड में बदलना अनिवार्य है।",
+        inputLabel: "यहां विरासत कृतिदेव (KrutiDev) फ़ॉन्ट टेक्स्ट पेस्ट करें:",
+        inputPlaceholder: "उदा. jkt_k (कृतिदेव कीबोर्ड कोड 'राकेश' या समान के लिए)",
+        outputLabel: "यूनिकोड UTF-8 आउटपुट:",
+        convertedText: "रूपांतरित पाठ (Converted Text)",
+        charCount: "अक्षर गणना",
+        instructionsTitle: "कोड में स्थानीय कनवर्टर का उपयोग कैसे करें:",
+        instructionsDesc: "डेटा को डेटाबेस में सहेजने से पहले उसे यूनिकोड में बदलने के लिए बैकएंड फ़ॉन्ट सैनिटाइजेशन उपयोगिता का उपयोग करें। अपने एपीआई कंट्रोलर्स में, पेलोड पार्स करने से पहले `KrutiDevToUnicode` मॉड्यूल आयात करें।"
+      },
+      config: {
+        title: "सिस्टम कॉन्फ़िगरेशन और बायोमेट्रिक प्रोटोकॉल",
+        desc: "CCTNS 2.0 पुलिस नोड्स को सुचारू रूप से चलाने के लिए सही सिस्टम सेटिंग्स आवश्यक हैं। गलत मापदंडों से सिंक बाधित हो सकता है।",
+        jvmTitle: "JVM मेमोरी और GC सेटिंग्स",
+        jvmParams: "-Xms4g -Xmx8g -XX:+UseG1GC -Dfile.encoding=UTF-8",
+        jvmDesc: "बड़े साक्ष्य दस्तावेजों को डाउनलोड करते समय OutOfMemory त्रुटियों को रोकता है।",
+        syncTitle: "ऑफ़लाइन सिंक अंतराल पैरामीटर",
+        syncParams: "cctns.sync.interval=300000ms (5 मिनट)\ncctns.sync.retry.max=5",
+        syncDesc: "राज्य डेटा सेंटर (SDC) में डेटा सिंक करने की आवृत्ति को नियंत्रित करता है।",
+        mfaTitle: "बायोमेट्रिक और MFA एकीकरण",
+        mfaParams: "cctns.mfa.provider=UIDAI-Aadhaar\ncctns.mfa.device.strict=true",
+        mfaDesc: "अपराध रिकॉर्ड में किसी भी बदलाव के लिए फिंगरप्रिंट बायोमेट्रिक प्रमाणीकरण अनिवार्य करता है।"
+      },
+      faq: {
+        title: "अक्सर पूछे जाने वाले प्रश्न",
+        q1: "यदि पुलिस स्टेशन में इंटरनेट कनेक्टिविटी चली जाए तो क्या होगा?",
+        a1: "CCTNS 2.0 स्थानीय ऑफ़लाइन-प्रथम मोड में काम करता है। सभी रिकॉर्ड, प्राथमिकी और साक्ष्य हैश स्थानीय SQLite कैशे में लिखे जाते हैं। इंटरनेट कनेक्टिविटी (>= 2 Mbps) बहाल होने पर, सिंक प्रबंधक स्वचालित रूप से डेटा को SDC डेटाबेस के साथ सिंक कर देता है।",
+        q2: "कृतिदेव से यूनिकोड परिवर्तन क्यों अनिवार्य है?",
+        a2: "CCTNS 1.0 गैर-यूनिकोड फोंट्स का उपयोग करता था जिससे राष्ट्रीय स्तर के खोज इंजनों पर अपराधियों को खोजना असंभव था। यूनिकोड में बदलने से 'राजेश' नाम की खोज सभी राज्यों के डेटाबेस में आसानी से हो सकती है।",
+        q3: "CCTNS 2.0 में डेटा छेड़छाड़ को कैसे रोका जाता है?",
+        a3: "प्रत्येक ट्रांजैक्शन या केस अपडेट को SHA-256 हैश द्वारा ब्लॉक करके डिजिटल रूप से हस्ताक्षरित किया जाता है। स्थानीय डेटाबेस को सीधे बदलने का कोई भी प्रयास ऑडिट श्रृंखला को अमान्य कर देगा जिससे अलर्ट ट्रिगर होगा।",
+        q4: "क्या सामान्य उपयोगकर्ता नए पंजीकरण स्वीकृत कर सकते हैं?",
+        a4: "नहीं, केवल कमांड सेंटर एडमिन (admin) ही पंजीकरण अनुरोधों को स्वीकृत कर सकते हैं। वे आधिकारिक पहचान पत्रों की पुष्टि करने के बाद ही उपयोगकर्ता को लॉग इन करने की अनुमति देते हैं।"
+      }
     }
   }
 };

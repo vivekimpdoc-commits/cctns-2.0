@@ -5,6 +5,7 @@ import ReadinessCalculator from './components/ReadinessCalculator';
 import MigrationAssistant from './components/MigrationAssistant';
 import LoginPage from './components/LoginPage';
 import ManageRegistrations from './components/ManageRegistrations';
+import HelpGuide from './components/HelpGuide';
 import { locales } from './locales';
 
 const App = () => {
@@ -198,6 +199,13 @@ const App = () => {
           >
             {t.sidebar.assistant}
           </li>
+          <li 
+            className={`sidebar-item ${currentView === 'help' ? 'active' : ''}`}
+            onClick={() => setCurrentView('help')}
+            style={{ fontWeight: 'bold' }}
+          >
+            {t.sidebar.helpGuide}
+          </li>
         </ul>
 
         {/* Logged in Officer Profile Card */}
@@ -356,6 +364,10 @@ const App = () => {
             
             {currentView === 'assistant' && (
               <MigrationAssistant t={t} />
+            )}
+            
+            {currentView === 'help' && (
+              <HelpGuide t={t} />
             )}
           </div>
         )}
