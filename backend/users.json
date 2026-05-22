@@ -1,0 +1,14 @@
+[
+  {
+    "email": "admin@cctns.gov.in",
+    "name": "Command Center Admin (IPS)",
+    "role": "admin",
+    "status": "approved"
+  },
+  {
+    "email": "user@cctns.gov.in",
+    "name": "Field Constable (Sharma)",
+    "role": "user",
+    "status": "approved"
+  }
+]

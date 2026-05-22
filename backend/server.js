@@ -10,19 +10,22 @@ app.use(cors());
 app.use(express.json());
 
 const DATA_FILE = path.join(__dirname, 'challenges.json');
+const USERS_FILE = path.join(__dirname, 'users.json');
 
-// Helper to read challenges
+// In-memory OTP storage: { email: { otp, expires } }
+const otps = {};
+
+// Helper to read/write challenges
 const readChallenges = () => {
   try {
     const rawData = fs.readFileSync(DATA_FILE, 'utf8');
     return JSON.parse(rawData);
   } catch (error) {
-    console.error("Error reading data file, using default structure:", error);
+    console.error("Error reading data file:", error);
     return [];
   }
 };
 
-// Helper to write challenges
 const writeChallenges = (data) => {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
@@ -31,16 +34,203 @@ const writeChallenges = (data) => {
   }
 };
 
-// Endpoints
+// Helper to read/write users database
+const readUsers = () => {
+  try {
+    const raw = fs.readFileSync(USERS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Error reading users file, returning empty array:", e);
+    return [];
+  }
+};
+
+const writeUsers = (users) => {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  } catch (e) {
+    console.error("Error writing users file:", e);
+  }
+};
+
+// ================= AUTH & REGISTRATION ENDPOINTS =================
+
+// Register User/Admin
+app.post('/api/auth/register', (req, res) => {
+  const { name, email, role } = req.body;
+  
+  if (!name || !email || !role) {
+    return res.status(400).json({ error: "Sabhi fields (Name, Email, Role) required hain." });
+  }
+
+  if (!email.includes('@')) {
+    return res.status(400).json({ error: "Sahi email format enter karein." });
+  }
+
+  if (!['admin', 'user'].includes(role)) {
+    return res.status(400).json({ error: "Invalid role value." });
+  }
+
+  const users = readUsers();
+  const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+  if (exists) {
+    return res.status(400).json({ error: "Yeh Email ID pehle se registered hai. Kripya login karein." });
+  }
+
+  // Create new pending user
+  const newUser = {
+    email: email.toLowerCase().trim(),
+    name: name.trim(),
+    role: role,
+    status: 'pending' // Enforce validation
+  };
+
+  users.push(newUser);
+  writeUsers(users);
+
+  res.json({ message: "Registration request send ho gayi hai. Login karne se pehle Admin approval ki zarurat hai." });
+});
+
+// Send OTP (Enforces registration checks)
+app.post('/api/auth/send-otp', (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: "Kripya sahi email address enter karein." });
+  }
+
+  const users = readUsers();
+  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+
+  if (!user) {
+    return res.status(400).json({ error: "Yeh Email ID registered nahi hai. Kripya pehle register karein." });
+  }
+
+  if (user.status === 'pending') {
+    return res.status(400).json({ error: "Aapka account admin verification ke liye pending hai. Approval ke baad hi OTP generate hoga." });
+  }
+
+  if (user.status === 'rejected') {
+    return res.status(400).json({ error: "Aapka account validation request reject ho gaya hai. System administrator se contact karein." });
+  }
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes expiration
+
+  otps[email] = { otp, expires };
+
+  console.log(`\n==========================================`);
+  console.log(`[SIMULATED EMAIL] OTP Sent to: ${email}`);
+  console.log(`Your CCTNS login verification code is: ${otp}`);
+  console.log(`==========================================\n`);
+
+  res.json({ 
+    message: "OTP successfully dispatched to email.", 
+    simulatedOtp: otp 
+  });
+});
+
+// Verify OTP
+app.post('/api/auth/verify-otp', (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email aur verification OTP required hai." });
+  }
+
+  const record = otps[email];
+  if (!record) {
+    return res.status(400).json({ error: "Session invalid ya expire ho chuka hai. Kripya naya OTP request karein." });
+  }
+
+  if (Date.now() > record.expires) {
+    delete otps[email];
+    return res.status(400).json({ error: "OTP expired ho chuka hai. Naya code request karein." });
+  }
+
+  if (record.otp !== otp) {
+    return res.status(400).json({ error: "Galat OTP! Kripya code check karke firse enter karein." });
+  }
+
+  // OTP verified, clear it
+  delete otps[email];
+
+  // Fetch full details from database
+  const users = readUsers();
+  const profile = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+
+  if (!profile || profile.status !== 'approved') {
+    return res.status(400).json({ error: "Authentication status checks failed. Contact admin." });
+  }
+
+  const mockToken = `cctns-token-${Buffer.from(JSON.stringify(profile)).toString('base64')}`;
+
+  res.json({
+    message: "OTP verify ho gaya hai.",
+    token: mockToken,
+    user: profile
+  });
+});
+
+
+// ================= ADMIN AUDIT & APPROVAL ENDPOINTS =================
+
+// Get all pending users
+app.get('/api/admin/pending-users', (req, res) => {
+  const userRole = req.headers['x-user-role'];
+  if (userRole !== 'admin') {
+    return res.status(403).json({ error: "Access Denied: Is panel ko access karne ke liye admin credentials chahiye." });
+  }
+
+  const users = readUsers();
+  const pending = users.filter(u => u.status === 'pending');
+  res.json(pending);
+});
+
+// Approve/Reject registration request
+app.post('/api/admin/approve-user', (req, res) => {
+  const userRole = req.headers['x-user-role'];
+  if (userRole !== 'admin') {
+    return res.status(403).json({ error: "Access Denied: Is action ke liye admin levels authorize hona chahiye." });
+  }
+
+  const { email, action } = req.body;
+  if (!email || !['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ error: "Invalid registration parameters." });
+  }
+
+  const users = readUsers();
+  const index = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase().trim());
+
+  if (index === -1) {
+    return res.status(404).json({ error: "User profile found nahi hui." });
+  }
+
+  // Set status
+  users[index].status = action === 'approve' ? 'approved' : 'rejected';
+  writeUsers(users);
+
+  res.json({ message: `Account request successfully ${action}ed.` });
+});
+
+
+// ================= CORE DATA ENDPOINTS =================
+
 app.get('/api/challenges', (req, res) => {
   const challenges = readChallenges();
   res.json(challenges);
 });
 
+// Role-protected update status
 app.post('/api/challenges/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
+  const userRole = req.headers['x-user-role'];
   
+  if (userRole !== 'admin') {
+    return res.status(403).json({ error: "Access Denied: Is action ke liye admin permissions (admin@cctns.gov.in) ki aavashyakta hai." });
+  }
+
   if (!['todo', 'inprogress', 'resolved'].includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
   }
@@ -67,7 +257,6 @@ app.post('/api/readiness-check', (req, res) => {
     biometricDevices
   } = req.body;
 
-  // Each true counts for a certain score weight
   let score = 0;
   const details = [];
 
@@ -80,7 +269,7 @@ app.post('/api/readiness-check', (req, res) => {
 
   if (networkBandwidth) {
     score += 15;
-    details.push("Network Bandwidth: Adequate (>2Mbps stable links configured).");
+    details.push("Network Bandwidth: Adequate (&gt;2Mbps stable links configured).");
   } else {
     details.push("Network Bandwidth: WEAK. Setup regional offline replication server (Local CAS).");
   }
@@ -131,7 +320,6 @@ app.post('/api/readiness-check', (req, res) => {
   });
 });
 
-// Mock Chatbot Assistant
 app.post('/api/chat-query', (req, res) => {
   const { query } = req.body;
   if (!query) {

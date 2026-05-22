@@ -3,16 +3,31 @@ import DashboardOverview from './components/DashboardOverview';
 import KanbanBoard from './components/KanbanBoard';
 import ReadinessCalculator from './components/ReadinessCalculator';
 import MigrationAssistant from './components/MigrationAssistant';
+import LoginPage from './components/LoginPage';
+import ManageRegistrations from './components/ManageRegistrations';
 
 const App = () => {
+  const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('overview');
   const [challenges, setChallenges] = useState([]);
   const [readinessScore, setReadinessScore] = useState(35);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  // Check active session on mount
+  useEffect(() => {
+    const cachedUser = localStorage.getItem('cctns_user');
+    if (cachedUser) {
+      setUser(JSON.parse(cachedUser));
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   // Fetch challenge list from backend APIs
   const fetchChallenges = async () => {
+    if (!user) return;
     try {
       const response = await fetch('/api/challenges');
       if (!response.ok) throw new Error('API server status check failed');
@@ -27,26 +42,51 @@ const App = () => {
     }
   };
 
-  // Update challenge status
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      fetchChallenges();
+    }
+  }, [user]);
+
+  // Update challenge status (role-protected)
   const updateChallengeStatus = async (challengeId, newStatus) => {
+    if (!user) return;
+    setActionError(null);
     try {
       const response = await fetch(`/api/challenges/${challengeId}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-role': user.role 
+        },
         body: JSON.stringify({ status: newStatus })
       });
-      if (response.ok) {
-        // Refresh local list
-        fetchChallenges();
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Status update failed.");
       }
+      
+      fetchChallenges();
     } catch (err) {
       console.error("Failed to update status:", err);
+      setActionError(err.message);
+      setTimeout(() => setActionError(null), 5000);
     }
   };
 
-  useEffect(() => {
-    fetchChallenges();
-  }, []);
+  const handleLogout = () => {
+    localStorage.removeItem('cctns_user');
+    localStorage.removeItem('cctns_token');
+    setUser(null);
+    setChallenges([]);
+    setCurrentView('overview');
+  };
+
+  if (!user) {
+    return <LoginPage onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />;
+  }
 
   return (
     <div className="app-container">
@@ -73,6 +113,17 @@ const App = () => {
           >
             <span>📋</span> Migration Board
           </li>
+          
+          {/* Admin Registration Moderation Tab */}
+          {user.role === 'admin' && (
+            <li 
+              className={`sidebar-item ${currentView === 'registrations' ? 'active' : ''}`}
+              onClick={() => setCurrentView('registrations')}
+            >
+              <span>👤</span> Approve Requests
+            </li>
+          )}
+
           <li 
             className={`sidebar-item ${currentView === 'calculator' ? 'active' : ''}`}
             onClick={() => setCurrentView('calculator')}
@@ -86,12 +137,48 @@ const App = () => {
             <span>💬</span> Expert Assistant
           </li>
         </ul>
-        
-        <div style={{ marginTop: 'auto', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glow)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>PROJECT STATE</div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--accent)', marginTop: '0.25rem' }}>1.0 &rarr; 2.0 Upgrade</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Frontend/Backend separated for modular edits.</div>
+
+        {/* Logged in Officer Profile Card */}
+        <div style={{ 
+          marginTop: 'auto', 
+          padding: '1rem', 
+          background: 'rgba(255,255,255,0.02)', 
+          borderRadius: 'var(--radius-sm)', 
+          border: '1px solid var(--border-glow)',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Logged In Officer:
+          </div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+            {user.name}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 'bold', marginTop: '0.15rem', textTransform: 'uppercase' }}>
+            Role: {user.role}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            {user.email}
+          </div>
         </div>
+        
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            width: '100%',
+            backgroundColor: 'var(--bg-tertiary)', 
+            border: '1px solid var(--danger-glow)', 
+            color: '#fca5a5', 
+            padding: '0.75rem', 
+            borderRadius: 'var(--radius-sm)', 
+            cursor: 'pointer',
+            fontWeight: '600',
+            transition: 'var(--transition)'
+          }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--danger-glow)'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-tertiary)'}
+        >
+          🚪 Safe Log Out
+        </button>
       </aside>
 
       {/* Main Content Area */}
@@ -125,6 +212,21 @@ const App = () => {
           </div>
         )}
 
+        {actionError && (
+          <div style={{ 
+            padding: '1rem', 
+            backgroundColor: 'var(--danger-glow)', 
+            border: '1px solid var(--danger)', 
+            borderRadius: 'var(--radius-sm)', 
+            color: '#fca5a5', 
+            marginBottom: '2rem', 
+            fontSize: '0.88rem',
+            animation: 'fadeIn 0.3s'
+          }}>
+            🚫 <strong>Action Denied:</strong> {actionError}
+          </div>
+        )}
+
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px', color: 'var(--text-muted)' }}>
             Loading challenge dashboard metrics...
@@ -142,8 +244,13 @@ const App = () => {
             {currentView === 'board' && (
               <KanbanBoard 
                 challenges={challenges} 
+                userRole={user.role} 
                 onUpdateStatus={updateChallengeStatus} 
               />
+            )}
+
+            {currentView === 'registrations' && (
+              <ManageRegistrations />
             )}
             
             {currentView === 'calculator' && (

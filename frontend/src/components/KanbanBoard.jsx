@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const KanbanBoard = ({ challenges, onUpdateStatus }) => {
+const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
   const [selectedChallenge, setSelectedChallenge] = useState(null);
 
   const todoCards = challenges.filter(c => c.status === 'todo');
@@ -158,23 +158,36 @@ const KanbanBoard = ({ challenges, onUpdateStatus }) => {
             </div>
 
             <div className="status-update-row">
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Move challenge status in workflow:</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Move challenge status in workflow:</span>
+                {userRole !== 'admin' && (
+                  <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 600 }}>
+                    ⚠️ Admin authorization (admin@cctns.gov.in) required to modify state.
+                  </span>
+                )}
+              </div>
               <div className="status-btn-group">
                 <button 
                   className={`btn-status ${selectedChallenge.status === 'todo' ? 'active-todo' : ''}`}
                   onClick={() => handleStatusChange(selectedChallenge.id, 'todo')}
+                  disabled={userRole !== 'admin'}
+                  style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                   To Do
                 </button>
                 <button 
                   className={`btn-status ${selectedChallenge.status === 'inprogress' ? 'active-inprogress' : ''}`}
                   onClick={() => handleStatusChange(selectedChallenge.id, 'inprogress')}
+                  disabled={userRole !== 'admin'}
+                  style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                   In Progress
                 </button>
                 <button 
                   className={`btn-status ${selectedChallenge.status === 'resolved' ? 'active-resolved' : ''}`}
                   onClick={() => handleStatusChange(selectedChallenge.id, 'resolved')}
+                  disabled={userRole !== 'admin'}
+                  style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                   Resolved
                 </button>
