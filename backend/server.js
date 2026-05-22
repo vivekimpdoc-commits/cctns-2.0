@@ -201,22 +201,33 @@ app.post('/api/auth/verify-otp', (req, res) => {
 // ================= ADMIN AUDIT & APPROVAL ENDPOINTS =================
 
 // Get all pending users
+// superadmin sees ALL pending (users + admins)
+// admin sees only pending users (constables)
 app.get('/api/admin/pending-users', (req, res) => {
   const userRole = req.headers['x-user-role'];
-  if (userRole !== 'admin') {
-    return res.status(403).json({ error: "Access Denied: Is panel ko access karne ke liye admin credentials chahiye." });
+  if (userRole !== 'admin' && userRole !== 'superadmin') {
+    return res.status(403).json({ error: "Access Denied: Is panel ko access karne ke liye admin ya superadmin credentials chahiye." });
   }
 
   const users = readUsers();
-  const pending = users.filter(u => u.status === 'pending');
+  let pending;
+  if (userRole === 'superadmin') {
+    // Superadmin can see all pending including admins
+    pending = users.filter(u => u.status === 'pending');
+  } else {
+    // Regular admin can only see pending constable/user registrations
+    pending = users.filter(u => u.status === 'pending' && u.role === 'user');
+  }
   res.json(pending);
 });
 
 // Approve/Reject registration request
+// Only superadmin can approve/reject admin role registrations
+// Regular admin can only approve/reject user (constable) registrations
 app.post('/api/admin/approve-user', (req, res) => {
   const userRole = req.headers['x-user-role'];
-  if (userRole !== 'admin') {
-    return res.status(403).json({ error: "Access Denied: Is action ke liye admin levels authorize hona chahiye." });
+  if (userRole !== 'admin' && userRole !== 'superadmin') {
+    return res.status(403).json({ error: "Access Denied: Is action ke liye admin ya superadmin permissions chahiye." });
   }
 
   const { email, action } = req.body;
@@ -229,6 +240,16 @@ app.post('/api/admin/approve-user', (req, res) => {
 
   if (index === -1) {
     return res.status(404).json({ error: "User profile found nahi hui." });
+  }
+
+  // Permission check: regular admin cannot approve admin-role registrations
+  if (userRole === 'admin' && users[index].role === 'admin') {
+    return res.status(403).json({ error: "Access Denied: Admin registration ke liye sirf Super Admin approve kar sakta hai. Kripya Super Admin se sampark karein." });
+  }
+
+  // Superadmin cannot be approved through this route (must be pre-seeded)
+  if (users[index].role === 'superadmin') {
+    return res.status(403).json({ error: "Super Admin accounts manually configure kiye jate hain. Is route se approve nahi kiya ja sakta." });
   }
 
   // Set status
@@ -246,14 +267,14 @@ app.get('/api/challenges', (req, res) => {
   res.json(challenges);
 });
 
-// Role-protected update status
+// Role-protected update status (admin and superadmin both can update)
 app.post('/api/challenges/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   const userRole = req.headers['x-user-role'];
   
-  if (userRole !== 'admin') {
-    return res.status(403).json({ error: "Access Denied: Is action ke liye admin permissions (admin@cctns.gov.in) ki aavashyakta hai." });
+  if (userRole !== 'admin' && userRole !== 'superadmin') {
+    return res.status(403).json({ error: "Access Denied: Is action ke liye admin ya superadmin permissions ki aavashyakta hai." });
   }
 
   if (!['todo', 'inprogress', 'resolved'].includes(status)) {

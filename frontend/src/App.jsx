@@ -29,6 +29,43 @@ const App = () => {
 
   const t = locales[lang] || locales.en;
 
+  // Detect if running on GitHub Pages (static, no backend available)
+  const IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
+
+  // Static mock data for GitHub Pages demo mode
+  const MOCK_CHALLENGES = [
+    { id: 'c1', title: 'Database Schema & Legacy Data Migration', category: 'Data Migration', risk: 'High', status: 'inprogress',
+      description: 'CCTNS 1.0 states use regional databases with varying local schema extensions and missing integrity constraints.', 
+      impact: 'Data loss during ingestion, unsearchable records, and broken foreign keys in CAS database.',
+      solution: 'Establish an automated ETL pipeline using standard Python schemas or Node streams.',
+      oldCode: '// Legacy JDBC with direct SQL\nStatement stmt = conn.createStatement();\nstmt.executeUpdate(query);',
+      newCode: '// Clean ORM, UTF-8 encoding\nconst fir = new FIRModel({ name: Buffer.from(name, "utf-8").toString() });\nawait fir.save();' },
+    { id: 'c2', title: 'Offline-Online Data Sync & Conflicts', category: 'Offline Sync', risk: 'High', status: 'todo',
+      description: 'Remote police stations face frequent internet outages. Data synchronization causes conflicts.',
+      impact: 'Two stations offline-registering the same case causes major conflict errors in SDC.',
+      solution: 'Implement Progressive Offline sync engine with IndexDB cache and UUID primary keys.',
+      oldCode: 'CREATE TABLE t_fir (\n  fir_serial_id SERIAL PRIMARY KEY -- Conflicts!\n);',
+      newCode: 'CREATE TABLE t_fir (\n  fir_uuid UUID PRIMARY KEY DEFAULT gen_random_uuid()\n);' },
+    { id: 'c3', title: 'ICJS System Interoperability API', category: 'ICJS Integration', risk: 'Medium', status: 'todo',
+      description: 'CCTNS 2.0 requires seamless communication with e-Prisons, e-Courts, and Forensic Labs.',
+      impact: 'Manual file transfers and delayed criminal record access in court hearings.',
+      solution: 'Develop microservices gateway with REST/gRPC endpoints and OAuth2 authentication.',
+      oldCode: '// Manual CSV export & SFTP upload\nSFTPClient.upload("sftp://courts.gov.in", csvFile);',
+      newCode: '// Real-time async via RabbitMQ\nawait channel.sendToQueue("icjs-sync", Buffer.from(message));' },
+    { id: 'c4', title: 'Complex UI & Training Resistance', category: 'UI/UX & Training', risk: 'Medium', status: 'inprogress',
+      description: 'CCTNS 1.0 has 100+ input fields per FIR form. Constables find it extremely difficult.',
+      impact: 'High error rates, FIR registration delays, officers writing on paper first.',
+      solution: 'Redesign into a responsive web app with step-by-step form wizards and bilingual support.',
+      oldCode: '<!-- Giant JSP page with 80+ fields -->\n<table><tr><td>Name:</td><td><input/></td></tr></table>',
+      newCode: '// Stepper component in React\nconst [step, setStep] = useState(1);\nreturn <Stepper step={step} />;' },
+    { id: 'c5', title: 'Security, Audit Logging & Tampering', category: 'Security & Auditing', risk: 'High', status: 'resolved',
+      description: 'CCTNS 1.0 stores logs in plain text files without cryptographic verification.',
+      impact: 'Risk of FIR tampering, no chain-of-custody for electronic evidence.',
+      solution: 'Implement SHA-256 cryptographic audit chain. Every change is digitally signed.',
+      oldCode: '# Plain text log - vulnerable\nlog_file.write(f"[{datetime.now()}] Updated FIR {fir_id}")',
+      newCode: '// Cryptographic audit trail\nconst hash = crypto.createHash("sha256").update(payload).digest("hex");\nawait AuditLogModel.save({ hash });' }
+  ];
+
   // Check active session on mount
   useEffect(() => {
     const cachedUser = localStorage.getItem('cctns_user');
@@ -39,9 +76,15 @@ const App = () => {
     }
   }, []);
 
-  // Fetch challenge list from backend APIs
+  // Fetch challenge list from backend APIs (or use mock data on GitHub Pages)
   const fetchChallenges = async () => {
     if (!user) return;
+    if (IS_GITHUB_PAGES) {
+      setChallenges(MOCK_CHALLENGES);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch('/api/challenges');
       if (!response.ok) throw new Error('API server status check failed');
@@ -58,12 +101,11 @@ const App = () => {
 
   // Fetch pending registration requests count for admin
   const fetchPendingCount = async () => {
-    if (!user || user.role !== 'admin') return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return;
+    if (IS_GITHUB_PAGES) { setPendingCount(0); return; }
     try {
       const response = await fetch('/api/admin/pending-users', {
-        headers: {
-          'x-user-role': user.role
-        }
+        headers: { 'x-user-role': user.role }
       });
       if (response.ok) {
         const data = await response.json();
@@ -78,7 +120,7 @@ const App = () => {
     if (user) {
       setLoading(true);
       fetchChallenges();
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'superadmin') {
         fetchPendingCount();
         const interval = setInterval(fetchPendingCount, 15000);
         return () => clearInterval(interval);
@@ -90,6 +132,16 @@ const App = () => {
   const updateChallengeStatus = async (challengeId, newStatus) => {
     if (!user) return;
     setActionError(null);
+    // In GitHub Pages demo mode, update state locally
+    if (IS_GITHUB_PAGES) {
+      if (user.role !== 'admin' && user.role !== 'superadmin') {
+        setActionError("Demo Mode: Only Admin/Super Admin can update status.");
+        setTimeout(() => setActionError(null), 5000);
+        return;
+      }
+      setChallenges(prev => prev.map(c => c.id === challengeId ? { ...c, status: newStatus } : c));
+      return;
+    }
     try {
       const response = await fetch(`/api/challenges/${challengeId}/status`, {
         method: 'POST',
@@ -162,7 +214,7 @@ const App = () => {
           </li>
           
           {/* Admin Registration Moderation Tab (Highlighted dashboard styling) */}
-          {user.role === 'admin' && (
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <li 
               className={`sidebar-item highlight-tab ${currentView === 'registrations' ? 'active' : ''}`}
               onClick={() => setCurrentView('registrations')}

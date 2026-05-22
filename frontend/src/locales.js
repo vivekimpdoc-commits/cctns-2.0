@@ -47,7 +47,8 @@ export const locales = {
       btnResend: "Resend OTP",
       defaultAccounts: "DEFAULT APPROVED TESTING ACCOUNTS:",
       adminLabel: "🔑 Admin (IPS Admin Master)",
-      userLabel: "👮 User (Field Constable)"
+      userLabel: "👮 User (Field Constable)",
+      superAdminLabel: "⭐ Super Admin (IPS Director)"
     },
     overview: {
       highRisk: "High Risk Issues",
@@ -64,6 +65,8 @@ export const locales = {
       area1: "Data Schema & Encoding Conversion",
       area2: "Offline-Online Replication Config",
       area3: "MFA, Audit Chains & Compliance",
+      setupText: "33% Setup",
+      configuredText: "100% Configured",
       btnManageBoard: "Manage Migration Board & View Code Changes",
       quickTips: "Quick Migration Tips",
       tip1Title: "Tip 1: Avoid Serial Keys",
@@ -92,6 +95,53 @@ export const locales = {
       codeNewHeader: "CCTNS 2.0 (New REST API / React / Crypto Audit)",
       workflowLabel: "Move challenge status in workflow:",
       adminWarning: "⚠️ Admin authorization (admin@cctns.gov.in) required to modify state."
+    },
+    riskLevels: {
+      high: "High Risk",
+      medium: "Medium Risk",
+      low: "Low Risk"
+    },
+    statuses: {
+      todo: "To Do",
+      inprogress: "In Progress",
+      resolved: "Resolved"
+    },
+    challenges: {
+      c1: {
+        title: "Database Schema & Legacy Data Migration",
+        category: "Data Migration",
+        description: "CCTNS 1.0 states use regional databases with varying local schema extensions and missing integrity constraints. Character encoding (e.g., local state fonts) is not standardized, causing corrupted text when transferring to the central database.",
+        impact: "Data loss during ingestion, unsearchable records (e.g. criminal names stored in local character encodings like KrutiDev instead of Unicode UTF-8), and broken foreign keys in CAS database.",
+        solution: "Establish an automated ETL (Extract, Transform, Load) pipeline using standard Python schemas or Node streams. Convert font mappings to Unicode UTF-8 systematically and implement transaction logs for schema mapping validation."
+      },
+      c2: {
+        title: "Offline-Online Data Sync & Conflicts",
+        category: "Offline Sync",
+        description: "Remote police stations in hilly or rural areas face frequent internet outages. In CCTNS 1.0, data is updated locally and synchronized via daily/weekly batches or offline media (CDs/USBs). In CCTNS 2.0, systems must be online-first but handle offline state transparently.",
+        impact: "If two stations offline-register investigations referencing the same suspect or record, syncing them triggers major conflict errors and duplicate records in the central State Data Centre (SDC).",
+        solution: "Implement a Progressive Offline sync engine using a local IndexDB cache on the client side, and a background sync service worker. Use UUIDs (rather than auto-incrementing serial IDs) to prevent ID collisions, and CRDT/logical timestamping to resolve conflicts."
+      },
+      c3: {
+        title: "ICJS System Interoperability API",
+        category: "ICJS Integration",
+        description: "CCTNS 2.0 requires seamless communication with external pillars of the Inter-operable Criminal Justice System (ICJS): Prisons (e-Prisons), Courts (e-Courts), Prosecution, and Forensic Labs. CCTNS 1.0 lacks real-time API integrations.",
+        impact: "Manual file transfers, delayed access to criminal records in court hearings, slow forensic report updates, and high human error rates during data entry.",
+        solution: "Develop a microservices integration gateway using secure REST/gRPC endpoints. Implement OAuth2 authentication with JWT validation, along with a message queue (RabbitMQ/Kafka) to buffer transactions when external endpoints are down."
+      },
+      c4: {
+        title: "Complex UI & Training Resistance",
+        category: "UI/UX & Training",
+        description: "CCTNS 1.0 has a heavy, desktop-oriented UI with bloated input fields (often 100+ parameters to register an FIR). Police constables with basic technical literacy find it extremely difficult to navigate.",
+        impact: "High error rates, delays in FIR registration (takes hours instead of minutes), and resistance to using the system, forcing officers to write on paper first.",
+        solution: "Redesign the frontend into a responsive web application with step-by-step form wizards. Introduce regional language translation support (bilingual input), smart search suggestions, auto-filling fields, and integrated tooltips/interactive guide systems."
+      },
+      c5: {
+        title: "Security, Audit Logging & Tampering",
+        category: "Security & Auditing",
+        description: "CCTNS 1.0 stores application logs in simple text files or standard database tables without cryptographic verification. There is a risk of database administrators or attackers altering case files and updating timestamps directly in the database.",
+        impact: "Compromised legal integrity of FIRs, lack of chain-of-custody tracking for electronic evidence, and vulnerability to inside manipulation.",
+        solution: "Implement immutable auditing. Every case state change (created, modified, viewed) is digitally signed, and audit records are appended with SHA-256 block-hashes (forming a chain). Restrict direct database access through strict REST APIs with Multi-Factor Authentication (MFA)."
+      }
     },
     calculator: {
       title: "Police Station Readiness Diagnostic",
@@ -276,7 +326,8 @@ export const locales = {
       btnResend: "ओटीपी पुनः भेजें",
       defaultAccounts: "डिफ़ॉल्ट स्वीकृत परीक्षण खाते:",
       adminLabel: "🔑 एडमिन (IPS एडमिन मास्टर)",
-      userLabel: "👮 यूजर (फील्ड कांस्टेबल)"
+      userLabel: "👮 यूजर (फील्ड कांस्टेबल)",
+      superAdminLabel: "⭐ सुपर एडमिन (IPS डायरेक्टर)"
     },
     overview: {
       highRisk: "उच्च जोखिम वाले मामले",
@@ -293,6 +344,8 @@ export const locales = {
       area1: "डेटा स्कीमा और फ़ॉन्ट रूपांतरण",
       area2: "ऑफ़लाइन-ऑनलाइन डेटा सिंक कॉन्फ़िगरेशन",
       area3: "MFA, ऑडिट लॉग्स और सुरक्षा अनुपालन",
+      setupText: "33% सेटअप",
+      configuredText: "100% कॉन्फ़िगर किया गया",
       btnManageBoard: "माइग्रेशन बोर्ड प्रबंधित करें और कोड परिवर्तन देखें",
       quickTips: "महत्वपूर्ण सुझाव",
       tip1Title: "सुझाव 1: सीरियल कीज़ से बचें",
@@ -321,6 +374,53 @@ export const locales = {
       codeNewHeader: "CCTNS 2.0 (नया REST API / रिएक्ट / क्रिप्टो ऑडिट)",
       workflowLabel: "वर्कफ़्लो में चुनौती की स्थिति बदलें:",
       adminWarning: "⚠️ स्थिति बदलने के लिए एडमिन प्रमाणीकरण (admin@cctns.gov.in) आवश्यक है।"
+    },
+    riskLevels: {
+      high: "उच्च जोखिम",
+      medium: "मध्यम जोखिम",
+      low: "कम जोखिम"
+    },
+    statuses: {
+      todo: "बाकी काम",
+      inprogress: "प्रगति पर",
+      resolved: "पूर्ण"
+    },
+    challenges: {
+      c1: {
+        title: "डेटाबेस स्कीमा और पुराने डेटा का माइग्रेशन",
+        category: "डेटा माइग्रेशन",
+        description: "CCTNS 1.0 राज्यों में क्षेत्रीय डेटाबेस हैं जिनमें अलग-अलग स्थानीय स्कीमा हैं और डेटा सत्यापन की कमी है। कैरेक्टर एन्कोडिंग (जैसे स्थानीय राज्य फ़ॉन्ट) मानकीकृत नहीं है जिससे केंद्रीय डेटाबेस में स्थानांतरण के समय टेक्स्ट दूषित हो जाता है।",
+        impact: "डेटा इनजेशन के दौरान डेटा हानि, खोज योग्य नहीं रिकॉर्ड (जैसे KrutiDev की बजाय Unicode UTF-8 में संग्रहीत आपराधिक नाम), और CAS डेटाबेस में टूटी हुई फ़ॉरेन कीज़।",
+        solution: "मानक Python स्कीमा या Node streams का उपयोग करके एक स्वचालित ETL (Extract, Transform, Load) पाइपलाइन बनाएं। फ़ॉन्ट मैपिंग को UTF-8 यूनिकोड में व्यवस्थित रूप से बदलें और स्कीमा मैपिंग सत्यापन के लिए लेनदेन लॉग लागू करें।"
+      },
+      c2: {
+        title: "ऑफ़लाइन-ऑनलाइन डेटा सिंक और टकराव",
+        category: "ऑफ़लाइन सिंक",
+        description: "पहाड़ी या ग्रामीण क्षेत्रों में दूरस्थ पुलिस थानों में बार-बार इंटरनेट कनेक्टिविटी समस्याएं होती हैं। CCTNS 1.0 में, डेटा स्थानीय रूप से अपडेट किया जाता था और दैनिक/साप्ताहिक बैचों या ऑफ़लाइन मीडिया (CD/USB) के माध्यम से सिंक किया जाता था।",
+        impact: "यदि दो थाने एक ही संदिग्ध का ऑफ़लाइन रिकॉर्ड दर्ज करते हैं, तो सिंक करते समय बड़ी त्रुटियाँ और SDC में डुप्लिकेट रिकॉर्ड बन जाते हैं।",
+        solution: "क्लाइंट साइड पर IndexDB कैश और बैकग्राउंड सर्विस वर्कर के साथ Progressive Offline sync इंजन लागू करें। ID टकराव रोकने के लिए UUID का उपयोग करें और CRDT/लॉजिकल टाइमस्टैम्पिंग से विवादों को हल करें।"
+      },
+      c3: {
+        title: "ICJS सिस्टम इंटरऑपरेबिलिटी API",
+        category: "ICJS एकीकरण",
+        description: "CCTNS 2.0 को Inter-operable Criminal Justice System (ICJS) के बाहरी स्तंभों जैसे जेल (e-Prisons), न्यायालय (e-Courts), अभियोजन और फोरेंसिक लैब के साथ निर्बाध संचार की आवश्यकता है। CCTNS 1.0 में रियल-टाइम API एकीकरण नहीं था।",
+        impact: "मैन्युअल फ़ाइल स्थानांतरण, न्यायालय की सुनवाई में आपराधिक रिकॉर्ड तक देरी से पहुंच, धीमी फोरेंसिक रिपोर्ट अपडेट और डेटा एंट्री में उच्च मानवीय त्रुटि दर।",
+        solution: "सुरक्षित REST/gRPC endpoints का उपयोग करके एक माइक्रोसर्विसेज एकीकरण गेटवे विकसित करें। JWT सत्यापन के साथ OAuth2 प्रमाणीकरण और लेनदेन बफर करने के लिए RabbitMQ/Kafka मैसेज क्यू लागू करें।"
+      },
+      c4: {
+        title: "जटिल UI और प्रशिक्षण में प्रतिरोध",
+        category: "UI/UX और प्रशिक्षण",
+        description: "CCTNS 1.0 में एक भारी, डेस्कटॉप-उन्मुख UI है जिसमें बहुत सारे इनपुट फील्ड हैं (FIR दर्ज करने के लिए अक्सर 100+ पैरामीटर)। बुनियादी तकनीकी साक्षरता वाले पुलिस कांस्टेबल को इसे नेविगेट करना बेहद मुश्किल लगता है।",
+        impact: "उच्च त्रुटि दर, FIR पंजीकरण में देरी (मिनटों की बजाय घंटे लगते हैं), और सिस्टम का उपयोग करने में प्रतिरोध जिससे अधिकारी पहले कागज पर लिखते हैं।",
+        solution: "फ्रंटएंड को स्टेप-बाय-स्टेप फॉर्म विजार्ड के साथ एक रिस्पॉन्सिव वेब एप्लिकेशन के रूप में पुनर्डिज़ाइन करें। क्षेत्रीय भाषा अनुवाद समर्थन, स्मार्ट सर्च सुझाव, ऑटो-फिलिंग फील्ड और इंटरैक्टिव गाइड सिस्टम जोड़ें।"
+      },
+      c5: {
+        title: "सुरक्षा, ऑडिट लॉगिंग और डेटा छेड़छाड़",
+        category: "सुरक्षा और ऑडिटिंग",
+        description: "CCTNS 1.0 एप्लिकेशन लॉग को क्रिप्टोग्राफ़िक सत्यापन के बिना साधारण टेक्स्ट फ़ाइलों में संग्रहीत करता है। डेटाबेस प्रशासक या हमलावर सीधे डेटाबेस में केस फ़ाइलें बदल सकते हैं।",
+        impact: "FIR की कानूनी अखंडता से समझौता, इलेक्ट्रॉनिक साक्ष्य के chain-of-custody की कमी और अंदरूनी छेड़छाड़ की संभावना।",
+        solution: "अपरिवर्तनीय ऑडिटिंग लागू करें। प्रत्येक केस बदलाव को डिजिटल रूप से हस्ताक्षरित किया जाए और SHA-256 ब्लॉक-हैश के साथ ऑडिट रिकॉर्ड जोड़े जाएं। सख्त REST APIs और MFA के माध्यम से डेटाबेस एक्सेस प्रतिबंधित करें।"
+      }
     },
     calculator: {
       title: "पुलिस स्टेशन तैयारी स्तर डायग्नोस्टिक",

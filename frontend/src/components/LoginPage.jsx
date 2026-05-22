@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 const LoginPage = ({ onLoginSuccess, lang, toggleLang, t }) => {
+  const IS_GITHUB_PAGES = window.location.hostname.includes('github.io');
+
+  // Demo accounts for GitHub Pages (no backend needed)
+  const DEMO_ACCOUNTS = {
+    'superadmin@cctns.gov.in': { email: 'superadmin@cctns.gov.in', name: 'CCTNS Super Administrator (IPS Director)', role: 'superadmin', status: 'approved' },
+    'admin@cctns.gov.in':      { email: 'admin@cctns.gov.in',      name: 'Command Center Admin (IPS)',              role: 'admin',      status: 'approved' },
+    'user@cctns.gov.in':       { email: 'user@cctns.gov.in',       name: 'Field Constable (Sharma)',               role: 'user',       status: 'approved' },
+  };
   const [isRegistering, setIsRegistering] = useState(false);
   
   // Login form states
@@ -40,6 +48,27 @@ const LoginPage = ({ onLoginSuccess, lang, toggleLang, t }) => {
     setError(null);
     setLoading(true);
 
+    // GitHub Pages demo mode: bypass real OTP, simulate with code '123456'
+    if (IS_GITHUB_PAGES) {
+      const demoUser = DEMO_ACCOUNTS[email.toLowerCase().trim()];
+      if (!demoUser) {
+        setError(lang === 'en' 
+          ? `Demo Mode: Only demo accounts work here. Use superadmin@cctns.gov.in, admin@cctns.gov.in, or user@cctns.gov.in.`
+          : `डेमो मोड: केवल डेमो खाते काम करते हैं। superadmin@cctns.gov.in, admin@cctns.gov.in, या user@cctns.gov.in उपयोग करें।`);
+        setLoading(false);
+        return;
+      }
+      setStep(2);
+      setTimer(60);
+      setSimulatedMailAlert({
+        title: "DEMO MODE - SIMULATED OTP",
+        body: lang === 'en' ? `Demo OTP for ${email}:` : `${email} के लिए डेमो OTP:`,
+        otp: '123456'
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -75,6 +104,26 @@ const LoginPage = ({ onLoginSuccess, lang, toggleLang, t }) => {
     }
     setError(null);
     setLoading(true);
+
+    // GitHub Pages demo mode: accept only '123456'
+    if (IS_GITHUB_PAGES) {
+      if (otp !== '123456') {
+        setError(lang === 'en' ? "Demo Mode: Use OTP 123456" : "डेमो मोड: OTP 123456 उपयोग करें");
+        setLoading(false);
+        return;
+      }
+      const demoUser = DEMO_ACCOUNTS[email.toLowerCase().trim()];
+      if (!demoUser) {
+        setError(lang === 'en' ? "Account not found." : "खाता नहीं मिला।");
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('cctns_user', JSON.stringify(demoUser));
+      localStorage.setItem('cctns_token', 'demo-token');
+      onLoginSuccess(demoUser);
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/verify-otp', {
@@ -347,6 +396,15 @@ const LoginPage = ({ onLoginSuccess, lang, toggleLang, t }) => {
                     {t.login.defaultAccounts}
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button 
+                      type="button" 
+                      className="suggested-btn" 
+                      style={{ textAlign: 'left', width: '100%', justifyContent: 'space-between', display: 'flex', borderLeft: '3px solid #7c3aed' }}
+                      onClick={() => handleQuickSelect('superadmin@cctns.gov.in')}
+                    >
+                      <span>{t.login.superAdminLabel}</span>
+                      <span style={{ opacity: 0.6 }}>superadmin@cctns.gov.in</span>
+                    </button>
                     <button 
                       type="button" 
                       className="suggested-btn" 
