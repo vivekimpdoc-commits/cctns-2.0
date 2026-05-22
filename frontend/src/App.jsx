@@ -6,6 +6,7 @@ import MigrationAssistant from './components/MigrationAssistant';
 import LoginPage from './components/LoginPage';
 import ManageRegistrations from './components/ManageRegistrations';
 import HelpGuide from './components/HelpGuide';
+import SuperAdminPanel from './components/SuperAdminPanel';
 import { locales } from './locales';
 
 const App = () => {
@@ -200,6 +201,25 @@ const App = () => {
         </div>
         
         <ul className="sidebar-menu">
+          {/* Super Admin exclusive top link */}
+          {user.role === 'superadmin' && (
+            <li
+              className={`sidebar-item ${currentView === 'superadmin' ? 'active' : ''}`}
+              onClick={() => setCurrentView('superadmin')}
+              style={{
+                background: currentView === 'superadmin'
+                  ? 'linear-gradient(135deg, rgba(124,58,237,0.18), rgba(30,64,175,0.12))'
+                  : 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(30,64,175,0.05))',
+                border: '1px solid rgba(124,58,237,0.25)',
+                borderRadius: 'var(--radius-sm)',
+                color: '#7c3aed',
+                fontWeight: '800',
+                marginBottom: '0.5rem'
+              }}
+            >
+              ⭐ {lang === 'hi' ? 'सुपर एडमिन पैनल' : 'Super Admin Panel'}
+            </li>
+          )}
           <li 
             className={`sidebar-item ${currentView === 'overview' ? 'active' : ''}`}
             onClick={() => setCurrentView('overview')}
@@ -264,9 +284,11 @@ const App = () => {
         <div style={{ 
           marginTop: 'auto', 
           padding: '1rem', 
-          background: 'var(--bg-tertiary)', 
+          background: user.role === 'superadmin'
+            ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(30,64,175,0.08))'
+            : 'var(--bg-tertiary)', 
           borderRadius: 'var(--radius-sm)', 
-          border: '1px solid var(--border-glow)',
+          border: user.role === 'superadmin' ? '1px solid rgba(124,58,237,0.3)' : '1px solid var(--border-glow)',
           marginBottom: '1rem'
         }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -275,8 +297,8 @@ const App = () => {
           <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
             {user.name}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 'bold', marginTop: '0.15rem', textTransform: 'uppercase' }}>
-            {t.sidebar.role}: {user.role}
+          <div style={{ fontSize: '0.75rem', color: user.role === 'superadmin' ? '#7c3aed' : 'var(--accent)', fontWeight: 'bold', marginTop: '0.15rem', textTransform: 'uppercase' }}>
+            {user.role === 'superadmin' ? '⭐ Super Admin' : user.role === 'admin' ? '🔑 Admin' : '👮 ' + user.role}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden' }}>
             {user.email}
@@ -400,6 +422,16 @@ const App = () => {
                 userRole={user.role} 
                 onUpdateStatus={updateChallengeStatus} 
                 t={t}
+              />
+            )}
+
+            {/* Super Admin exclusive panel */}
+            {currentView === 'superadmin' && user.role === 'superadmin' && (
+              <SuperAdminPanel
+                challenges={challenges}
+                t={t}
+                lang={lang}
+                IS_GITHUB_PAGES={IS_GITHUB_PAGES}
               />
             )}
 

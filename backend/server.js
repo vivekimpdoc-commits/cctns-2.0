@@ -200,6 +200,16 @@ app.post('/api/auth/verify-otp', (req, res) => {
 
 // ================= ADMIN AUDIT & APPROVAL ENDPOINTS =================
 
+// Get ALL users — only superadmin can access this full list
+app.get('/api/superadmin/all-users', (req, res) => {
+  const userRole = req.headers['x-user-role'];
+  if (userRole !== 'superadmin') {
+    return res.status(403).json({ error: "Access Denied: Yeh endpoint sirf Super Admin ke liye reserved hai." });
+  }
+  const users = readUsers();
+  res.json(users);
+});
+
 // Get all pending users
 // superadmin sees ALL pending (users + admins)
 // admin sees only pending users (constables)
