@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
+const KanbanBoard = ({ challenges, userRole, onUpdateStatus, t }) => {
   const [selectedChallenge, setSelectedChallenge] = useState(null);
 
   const todoCards = challenges.filter(c => c.status === 'todo');
@@ -24,22 +24,22 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>Migration Kanban Board</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>{t.board.title}</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Upgradation tasks are categorized into three stages. Click on any card to view detailed explanations, impact reports, and code comparisons.
+          {t.board.desc}
         </p>
       </div>
 
       <div className="kanban-container">
         {/* TO DO COLUMN */}
-        <div className="kanban-column">
+        <div className="kanban-column" style={{ borderTop: '4px solid var(--danger)' }}>
           <div className="column-header">
-            <h3 style={{ color: 'var(--danger)' }}>To Do</h3>
-            <span className="column-count">{todoCards.length}</span>
+            <h3 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🔴 {t.board.colTodo}</h3>
+            <span className="column-count" style={{ backgroundColor: 'var(--danger-glow)', color: 'var(--danger)' }}>{todoCards.length}</span>
           </div>
           <div className="kanban-cards">
             {todoCards.map(c => (
-              <div key={c.id} className="kanban-card" onClick={() => handleCardClick(c)}>
+              <div key={c.id} className={`kanban-card risk-${c.risk.toLowerCase()}`} onClick={() => handleCardClick(c)}>
                 <div className="card-category">{c.category}</div>
                 <div className="card-title">{c.title}</div>
                 <div className="card-meta">
@@ -50,21 +50,21 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
             ))}
             {todoCards.length === 0 && (
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                No tasks here
+                {t.board.noTasks}
               </div>
             )}
           </div>
         </div>
 
         {/* IN PROGRESS COLUMN */}
-        <div className="kanban-column">
+        <div className="kanban-column" style={{ borderTop: '4px solid var(--warning)' }}>
           <div className="column-header">
-            <h3 style={{ color: 'var(--warning)' }}>In Progress</h3>
-            <span className="column-count">{inProgressCards.length}</span>
+            <h3 style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🟡 {t.board.colProgress}</h3>
+            <span className="column-count" style={{ backgroundColor: 'var(--warning-glow)', color: 'var(--warning)' }}>{inProgressCards.length}</span>
           </div>
           <div className="kanban-cards">
             {inProgressCards.map(c => (
-              <div key={c.id} className="kanban-card" onClick={() => handleCardClick(c)}>
+              <div key={c.id} className={`kanban-card risk-${c.risk.toLowerCase()}`} onClick={() => handleCardClick(c)}>
                 <div className="card-category">{c.category}</div>
                 <div className="card-title">{c.title}</div>
                 <div className="card-meta">
@@ -75,21 +75,21 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
             ))}
             {inProgressCards.length === 0 && (
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                No tasks in progress
+                {t.board.noProgress}
               </div>
             )}
           </div>
         </div>
 
         {/* RESOLVED COLUMN */}
-        <div className="kanban-column">
+        <div className="kanban-column" style={{ borderTop: '4px solid var(--success)' }}>
           <div className="column-header">
-            <h3 style={{ color: 'var(--success)' }}>Resolved</h3>
-            <span className="column-count">{resolvedCards.length}</span>
+            <h3 style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🟢 {t.board.colResolved}</h3>
+            <span className="column-count" style={{ backgroundColor: 'var(--success-glow)', color: 'var(--success)' }}>{resolvedCards.length}</span>
           </div>
           <div className="kanban-cards">
             {resolvedCards.map(c => (
-              <div key={c.id} className="kanban-card" onClick={() => handleCardClick(c)}>
+              <div key={c.id} className={`kanban-card risk-${c.risk.toLowerCase()}`} onClick={() => handleCardClick(c)}>
                 <div className="card-category">{c.category}</div>
                 <div className="card-title">{c.title}</div>
                 <div className="card-meta">
@@ -100,7 +100,7 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
             ))}
             {resolvedCards.length === 0 && (
               <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                No tasks resolved yet
+                {t.board.noResolved}
               </div>
             )}
           </div>
@@ -118,39 +118,39 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
               <h2>{selectedChallenge.title}</h2>
               <div className="modal-meta-row">
                 <span className={`card-badge ${selectedChallenge.risk.toLowerCase()}`}>
-                  {selectedChallenge.risk} Risk Level
+                  {selectedChallenge.risk} {t.board.modalRisk}
                 </span>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  Status: <strong style={{ color: 'var(--accent)', textTransform: 'uppercase' }}>{selectedChallenge.status}</strong>
+                  {t.board.modalStatus}: <strong style={{ color: 'var(--accent)', textTransform: 'uppercase' }}>{selectedChallenge.status}</strong>
                 </span>
               </div>
             </div>
 
             <div className="modal-body-sections">
               <div className="modal-section danger-section">
-                <h4>CCTNS 1.0 Upgrade Problem Description</h4>
+                <h4>{t.board.descTitle}</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>{selectedChallenge.description}</p>
               </div>
 
               <div className="modal-section" style={{ borderLeftColor: 'var(--warning)' }}>
-                <h4>Impact of Legacy System Constraint</h4>
+                <h4>{t.board.impactTitle}</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>{selectedChallenge.impact}</p>
               </div>
 
               <div className="modal-section success-section">
-                <h4>CCTNS 2.0 Modern Solution</h4>
+                <h4>{t.board.solutionTitle}</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>{selectedChallenge.solution}</p>
               </div>
 
               <div style={{ marginTop: '1rem' }}>
-                <h4 style={{ fontFamily: 'Space Grotesk', marginBottom: '0.5rem' }}>Implementation Code/Schema Difference</h4>
+                <h4 style={{ fontFamily: 'Space Grotesk', marginBottom: '0.5rem' }}>{t.board.codeTitle}</h4>
                 <div className="code-comparison-grid">
                   <div className="code-panel old">
-                    <div className="code-panel-header">CCTNS 1.0 (Old Relational / JSP / File Logs)</div>
+                    <div className="code-panel-header">{t.board.codeOldHeader}</div>
                     <pre><code>{selectedChallenge.oldCode}</code></pre>
                   </div>
                   <div className="code-panel new">
-                    <div className="code-panel-header">CCTNS 2.0 (New REST API / React / Crypto Audit)</div>
+                    <div className="code-panel-header">{t.board.codeNewHeader}</div>
                     <pre><code>{selectedChallenge.newCode}</code></pre>
                   </div>
                 </div>
@@ -159,10 +159,10 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
 
             <div className="status-update-row">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Move challenge status in workflow:</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t.board.workflowLabel}</span>
                 {userRole !== 'admin' && (
-                  <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 600 }}>
-                    ⚠️ Admin authorization (admin@cctns.gov.in) required to modify state.
+                  <span style={{ fontSize: '0.78rem', color: 'var(--danger)', fontWeight: 600 }}>
+                    {t.board.adminWarning}
                   </span>
                 )}
               </div>
@@ -173,7 +173,7 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
                   disabled={userRole !== 'admin'}
                   style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
-                  To Do
+                  {t.board.colTodo}
                 </button>
                 <button 
                   className={`btn-status ${selectedChallenge.status === 'inprogress' ? 'active-inprogress' : ''}`}
@@ -181,7 +181,7 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
                   disabled={userRole !== 'admin'}
                   style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
-                  In Progress
+                  {t.board.colProgress}
                 </button>
                 <button 
                   className={`btn-status ${selectedChallenge.status === 'resolved' ? 'active-resolved' : ''}`}
@@ -189,7 +189,7 @@ const KanbanBoard = ({ challenges, userRole, onUpdateStatus }) => {
                   disabled={userRole !== 'admin'}
                   style={userRole !== 'admin' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
-                  Resolved
+                  {t.board.colResolved}
                 </button>
               </div>
             </div>

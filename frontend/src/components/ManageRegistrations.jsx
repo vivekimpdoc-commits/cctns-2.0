@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ManageRegistrations = () => {
+const ManageRegistrations = ({ t, onActionSuccess }) => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,8 +46,12 @@ const ManageRegistrations = () => {
         throw new Error(data.error || "Action failed.");
       }
 
-      setSuccessMsg(`Officer ${email} registration successfully ${action}ed!`);
+      const template = action === 'approve' ? t.registrations.successApprove : t.registrations.successReject;
+      setSuccessMsg(template.replace('{email}', email));
       fetchPendingUsers();
+      if (onActionSuccess) {
+        onActionSuccess();
+      }
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -61,27 +65,27 @@ const ManageRegistrations = () => {
   return (
     <div>
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>Manage Registration Requests</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>{t.registrations.title}</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          As an Administrator, you must verify and approve newly registered police officer accounts before they can access the Command Center.
+          {t.registrations.desc}
         </p>
       </div>
 
       {error && (
-        <div style={{ padding: '1rem', backgroundColor: 'var(--danger-glow)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-sm)', color: '#fca5a5', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--danger-glow)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
           ⚠️ {error}
         </div>
       )}
 
       {successMsg && (
-        <div style={{ padding: '1rem', backgroundColor: 'var(--success-glow)', border: '1px solid var(--success)', borderRadius: 'var(--radius-sm)', color: '#86efac', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--success-glow)', border: '1px solid var(--success)', borderRadius: 'var(--radius-sm)', color: 'var(--success)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
           ✅ {successMsg}
         </div>
       )}
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>
-          Loading pending officer registrations...
+          {t.registrations.loading}
         </div>
       ) : pendingUsers.length === 0 ? (
         <div style={{ 
@@ -93,9 +97,9 @@ const ManageRegistrations = () => {
           color: 'var(--text-secondary)'
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-          <h3 style={{ fontFamily: 'Space Grotesk', marginBottom: '0.5rem' }}>No Pending Requests</h3>
+          <h3 style={{ fontFamily: 'Space Grotesk', marginBottom: '0.5rem' }}>{t.registrations.noRequestsTitle}</h3>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-            All registration requests have been cleared. New sign-ups will appear here for audit approvals.
+            {t.registrations.noRequestsDesc}
           </p>
         </div>
       ) : (
@@ -108,11 +112,11 @@ const ManageRegistrations = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
             <thead>
               <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-glow)' }}>
-                <th style={{ padding: '1rem' }}>Officer Name</th>
-                <th style={{ padding: '1rem' }}>Email Address</th>
-                <th style={{ padding: '1rem' }}>Requested Role</th>
-                <th style={{ padding: '1rem' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '1rem' }}>{t.registrations.thName}</th>
+                <th style={{ padding: '1rem' }}>{t.registrations.thEmail}</th>
+                <th style={{ padding: '1rem' }}>{t.registrations.thRole}</th>
+                <th style={{ padding: '1rem' }}>{t.registrations.thStatus}</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>{t.registrations.thActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -125,14 +129,14 @@ const ManageRegistrations = () => {
                       padding: '0.2rem 0.5rem', 
                       borderRadius: '4px',
                       backgroundColor: item.role === 'admin' ? 'rgba(79, 70, 229, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                      color: item.role === 'admin' ? '#c7d2fe' : '#a5f3fc',
+                      color: item.role === 'admin' ? '#4f46e5' : '#0891b2',
                       border: item.role === 'admin' ? '1px solid rgba(79, 70, 229, 0.3)' : '1px solid rgba(6, 182, 212, 0.3)'
                     }}>
                       {item.role}
                     </span>
                   </td>
                   <td style={{ padding: '1rem', color: 'var(--warning)', fontSize: '0.85rem' }}>
-                    ⌛ Pending Verification
+                    {t.registrations.pendingLabel}
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -140,35 +144,47 @@ const ManageRegistrations = () => {
                         onClick={() => handleAction(item.email, 'approve')}
                         style={{
                           backgroundColor: 'var(--success-glow)',
-                          color: '#86efac',
-                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          color: 'var(--success)',
+                          border: '1px solid rgba(15, 118, 110, 0.3)',
                           padding: '0.4rem 0.8rem',
                           borderRadius: '4px',
                           cursor: 'pointer',
                           fontWeight: 'bold',
                           transition: 'var(--transition)'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--success)'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--success-glow)'}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = 'var(--success)';
+                          e.target.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = 'var(--success-glow)';
+                          e.target.style.color = 'var(--success)';
+                        }}
                       >
-                        Approve
+                        {t.registrations.btnApprove}
                       </button>
                       <button 
                         onClick={() => handleAction(item.email, 'reject')}
                         style={{
                           backgroundColor: 'var(--danger-glow)',
-                          color: '#fca5a5',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: 'var(--danger)',
+                          border: '1px solid rgba(190, 18, 60, 0.3)',
                           padding: '0.4rem 0.8rem',
                           borderRadius: '4px',
                           cursor: 'pointer',
                           fontWeight: 'bold',
                           transition: 'var(--transition)'
                         }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--danger)'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--danger-glow)'}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = 'var(--danger)';
+                          e.target.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = 'var(--danger-glow)';
+                          e.target.style.color = 'var(--danger)';
+                        }}
                       >
-                        Reject
+                        {t.registrations.btnReject}
                       </button>
                     </div>
                   </td>

@@ -1,24 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const MigrationAssistant = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'bot',
-      text: 'Namaskar! Main CCTNS 2.0 Migration Assistant hoon. CCTNS 1.0 se 2.0 upgrade karte samay databases, offline replication sync pipelines, security protocols aur UI forms se relative problems ke bare mein aap mujhse questions pooch sakte hain.'
-    }
-  ]);
+const MigrationAssistant = ({ t }) => {
+  const [messages, setMessages] = useState([]);
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const isEn = t.assistant.btnSend === 'Send';
+
   const suggestedQuestions = [
-    "Offline database sync kaise hota hai?",
-    "Legacy character font clean kaise karein?",
-    "ICJS system ke sath APIs kaise work karti hain?",
-    "Data tampering aur security ke kya upgrades hain?",
-    "Constables ke user interface mein kya updates hain?"
+    t.assistant.q1,
+    t.assistant.q2,
+    t.assistant.q3,
+    t.assistant.q4,
+    t.assistant.q5
   ];
+
+  // Keep welcome message translated dynamically
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome',
+          sender: 'bot',
+          text: t.assistant.welcomeMsg
+        }
+      ]);
+    } else {
+      setMessages(prev => prev.map(msg => msg.id === 'welcome' ? { ...msg, text: t.assistant.welcomeMsg } : msg));
+    }
+  }, [t.assistant.welcomeMsg]);
 
   const handleSend = async (text) => {
     if (!text.trim()) return;
@@ -40,7 +51,7 @@ const MigrationAssistant = () => {
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
-        text: data.answer || "Kshama karein, main iska uttar abhi nahi dhoond pa raha hoon."
+        text: data.answer || (isEn ? "Sorry, I cannot find an answer to this right now." : "क्षमा करें, मैं अभी इसका उत्तर नहीं ढूंढ पा रहा हूँ।")
       };
       setMessages(prev => [...prev, botMsg]);
     } catch (err) {
@@ -48,7 +59,9 @@ const MigrationAssistant = () => {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'bot',
-        text: 'API Server connectivity check failed. Make sure server is running on port 5000.'
+        text: isEn 
+          ? 'API Server connectivity check failed. Make sure server is running on port 5000.' 
+          : 'API सर्वर कनेक्टिविटी जांच विफल रही। सुनिश्चित करें कि सर्वर पोर्ट 5000 पर चल रहा है।'
       }]);
     } finally {
       setLoading(false);
@@ -63,9 +76,9 @@ const MigrationAssistant = () => {
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>CCTNS Upgrade Chat Assistant</h2>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontFamily: 'Space Grotesk' }}>{t.assistant.title}</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          Ask dynamic questions in Hinglish or English about schema mapping, offline sync, data validation, and deployment issues.
+          {t.assistant.desc}
         </p>
       </div>
 
@@ -73,8 +86,8 @@ const MigrationAssistant = () => {
         <div className="chat-header">
           <div className="chat-avatar"></div>
           <div>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>CCTNS 2.0 Expert System</h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>Active Online Helpdesk</span>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{t.assistant.expertSystem}</h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>{t.assistant.activeHelp}</span>
           </div>
         </div>
 
@@ -105,14 +118,14 @@ const MigrationAssistant = () => {
         <form className="chat-input-area" onSubmit={(e) => { e.preventDefault(); handleSend(inputVal); }}>
           <input 
             type="text" 
-            placeholder="Type question here... (e.g. offline, security, database)"
+            placeholder={t.assistant.placeholder}
             className="chat-input"
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             disabled={loading}
           />
           <button type="submit" className="chat-send-btn" disabled={loading}>
-            Send
+            {t.assistant.btnSend}
           </button>
         </form>
       </div>

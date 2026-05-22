@@ -5,6 +5,7 @@ import ReadinessCalculator from './components/ReadinessCalculator';
 import MigrationAssistant from './components/MigrationAssistant';
 import LoginPage from './components/LoginPage';
 import ManageRegistrations from './components/ManageRegistrations';
+import { locales } from './locales';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -14,6 +15,18 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
+  
+  // Bilingual support state
+  const [lang, setLang] = useState(() => localStorage.getItem('cctns_lang') || 'en');
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const toggleLang = () => {
+    const newLang = lang === 'en' ? 'hi' : 'en';
+    setLang(newLang);
+    localStorage.setItem('cctns_lang', newLang);
+  };
+
+  const t = locales[lang] || locales.en;
 
   // Check active session on mount
   useEffect(() => {
@@ -42,10 +55,33 @@ const App = () => {
     }
   };
 
+  // Fetch pending registration requests count for admin
+  const fetchPendingCount = async () => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const response = await fetch('/api/admin/pending-users', {
+        headers: {
+          'x-user-role': user.role
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingCount(data.length);
+      }
+    } catch (err) {
+      console.error("Error fetching pending users count:", err);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setLoading(true);
       fetchChallenges();
+      if (user.role === 'admin') {
+        fetchPendingCount();
+        const interval = setInterval(fetchPendingCount, 15000);
+        return () => clearInterval(interval);
+      }
     }
   }, [user]);
 
@@ -82,10 +118,18 @@ const App = () => {
     setUser(null);
     setChallenges([]);
     setCurrentView('overview');
+    setPendingCount(0);
   };
 
   if (!user) {
-    return <LoginPage onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />;
+    return (
+      <LoginPage 
+        onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} 
+        lang={lang} 
+        toggleLang={toggleLang} 
+        t={t}
+      />
+    );
   }
 
   return (
@@ -96,7 +140,9 @@ const App = () => {
           <span style={{ fontSize: '1.75rem' }}>🚔</span>
           <div>
             <h2 className="sidebar-logo">CCTNS 2.0</h2>
-            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Migration Planner</span>
+            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              {t.sidebar.upgradeTitle}
+            </span>
           </div>
         </div>
         
@@ -105,22 +151,38 @@ const App = () => {
             className={`sidebar-item ${currentView === 'overview' ? 'active' : ''}`}
             onClick={() => setCurrentView('overview')}
           >
-            <span>📊</span> Overview Dashboard
+            {t.sidebar.overview}
           </li>
           <li 
             className={`sidebar-item ${currentView === 'board' ? 'active' : ''}`}
             onClick={() => setCurrentView('board')}
           >
-            <span>📋</span> Migration Board
+            {t.sidebar.board}
           </li>
           
-          {/* Admin Registration Moderation Tab */}
+          {/* Admin Registration Moderation Tab (Highlighted dashboard styling) */}
           {user.role === 'admin' && (
             <li 
-              className={`sidebar-item ${currentView === 'registrations' ? 'active' : ''}`}
+              className={`sidebar-item highlight-tab ${currentView === 'registrations' ? 'active' : ''}`}
               onClick={() => setCurrentView('registrations')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              <span>👤</span> Approve Requests
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {t.sidebar.approveRequests}
+              </span>
+              {pendingCount > 0 && (
+                <span className="pending-badge-count" style={{
+                  backgroundColor: 'var(--danger)',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 4px rgba(190, 18, 60, 0.3)'
+                }}>
+                  {pendingCount}
+                </span>
+              )}
             </li>
           )}
 
@@ -128,13 +190,13 @@ const App = () => {
             className={`sidebar-item ${currentView === 'calculator' ? 'active' : ''}`}
             onClick={() => setCurrentView('calculator')}
           >
-            <span>🎛️</span> Readiness Calculator
+            {t.sidebar.calculator}
           </li>
           <li 
             className={`sidebar-item ${currentView === 'assistant' ? 'active' : ''}`}
             onClick={() => setCurrentView('assistant')}
           >
-            <span>💬</span> Expert Assistant
+            {t.sidebar.assistant}
           </li>
         </ul>
 
@@ -142,19 +204,19 @@ const App = () => {
         <div style={{ 
           marginTop: 'auto', 
           padding: '1rem', 
-          background: 'rgba(255,255,255,0.02)', 
+          background: 'var(--bg-tertiary)', 
           borderRadius: 'var(--radius-sm)', 
           border: '1px solid var(--border-glow)',
           marginBottom: '1rem'
         }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Logged In Officer:
+            {t.sidebar.loggedOfficer}:
           </div>
           <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
             {user.name}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 'bold', marginTop: '0.15rem', textTransform: 'uppercase' }}>
-            Role: {user.role}
+            {t.sidebar.role}: {user.role}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden' }}>
             {user.email}
@@ -167,17 +229,23 @@ const App = () => {
             width: '100%',
             backgroundColor: 'var(--bg-tertiary)', 
             border: '1px solid var(--danger-glow)', 
-            color: '#fca5a5', 
+            color: 'var(--danger)', 
             padding: '0.75rem', 
             borderRadius: 'var(--radius-sm)', 
             cursor: 'pointer',
             fontWeight: '600',
             transition: 'var(--transition)'
           }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--danger-glow)'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--bg-tertiary)'}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = 'var(--danger)';
+            e.target.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = 'var(--bg-tertiary)';
+            e.target.style.color = 'var(--danger)';
+          }}
         >
-          🚪 Safe Log Out
+          {t.sidebar.logout}
         </button>
       </aside>
 
@@ -185,26 +253,50 @@ const App = () => {
       <main className="main-content">
         <header className="header">
           <div className="header-title">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-              <span className="badge-gov">GOVERNMENT OF INDIA</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>MHA Initiative</span>
-            </div>
-            <h1>CCTNS Upgrade Command Center</h1>
-            <p>Track, resolve, and audit system transitions across police hubs</p>
+            <h1>{t.header.title}</h1>
+            <p>{t.header.desc}</p>
           </div>
           
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {/* Elegant Language switcher button */}
+            <button 
+              onClick={toggleLang} 
+              style={{ 
+                background: 'var(--primary-glow)', 
+                border: '1px solid var(--primary)', 
+                color: 'var(--primary)', 
+                padding: '0.5rem 1.25rem', 
+                borderRadius: 'var(--radius-sm)', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'var(--transition)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'var(--primary)';
+                e.target.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'var(--primary-glow)';
+                e.target.style.color = 'var(--primary)';
+              }}
+            >
+              🌐 {lang === 'en' ? 'हिन्दी (Hindi)' : 'English'}
+            </button>
+
             <button 
               onClick={fetchChallenges} 
               style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-glow)', color: 'var(--text-primary)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
             >
-              Sync DB
+              {t.header.syncBtn}
             </button>
           </div>
         </header>
 
         {error && (
-          <div style={{ padding: '1.25rem', backgroundColor: 'var(--danger-glow)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-sm)', color: '#fca5a5', marginBottom: '2rem', fontSize: '0.9rem' }}>
+          <div style={{ padding: '1.25rem', backgroundColor: 'var(--danger-glow)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', marginBottom: '2rem', fontSize: '0.9rem' }}>
             ⚠️ <strong>Backend Offline:</strong> {error}
             <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               Start backend: <code>cd backend && npm start</code> on port 5000.
@@ -218,7 +310,7 @@ const App = () => {
             backgroundColor: 'var(--danger-glow)', 
             border: '1px solid var(--danger)', 
             borderRadius: 'var(--radius-sm)', 
-            color: '#fca5a5', 
+            color: 'var(--danger)', 
             marginBottom: '2rem', 
             fontSize: '0.88rem',
             animation: 'fadeIn 0.3s'
@@ -238,6 +330,7 @@ const App = () => {
                 challenges={challenges} 
                 onNavigate={setCurrentView} 
                 readinessScore={readinessScore} 
+                t={t}
               />
             )}
             
@@ -246,21 +339,23 @@ const App = () => {
                 challenges={challenges} 
                 userRole={user.role} 
                 onUpdateStatus={updateChallengeStatus} 
+                t={t}
               />
             )}
 
             {currentView === 'registrations' && (
-              <ManageRegistrations />
+              <ManageRegistrations t={t} onActionSuccess={fetchPendingCount} />
             )}
             
             {currentView === 'calculator' && (
               <ReadinessCalculator 
                 onReadinessCalculated={setReadinessScore} 
+                t={t}
               />
             )}
             
             {currentView === 'assistant' && (
-              <MigrationAssistant />
+              <MigrationAssistant t={t} />
             )}
           </div>
         )}

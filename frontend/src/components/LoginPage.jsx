@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const LoginPage = ({ onLoginSuccess }) => {
+const LoginPage = ({ onLoginSuccess, lang, toggleLang, t }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   
   // Login form states
@@ -34,7 +34,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   const handleRequestOtp = async (e) => {
     e?.preventDefault();
     if (!email.trim() || !email.includes('@')) {
-      setError("Kripya valid email address enter karein.");
+      setError(lang === 'en' ? "Please enter a valid email address." : "कृपया एक वैध ईमेल पता दर्ज करें।");
       return;
     }
     setError(null);
@@ -48,14 +48,16 @@ const LoginPage = ({ onLoginSuccess }) => {
       });
       const data = await response.json();
       
-      if (!response.ok) throw new Error(data.error || "OTP send karne mein failure.");
+      if (!response.ok) throw new Error(data.error || (lang === 'en' ? "Failed to send OTP." : "ओटीपी भेजने में विफलता।"));
 
       setStep(2);
       setTimer(60);
       
       setSimulatedMailAlert({
         title: "SIMULATION MAIL DEPLOYED",
-        body: `CCTNS Mail Hub sent verification code to ${email}:`,
+        body: lang === 'en' 
+          ? `CCTNS Mail Hub sent verification code to ${email}:`
+          : `CCTNS मेल हब ने ${email} पर सत्यापन कोड भेजा है:`,
         otp: data.simulatedOtp
       });
     } catch (err) {
@@ -68,7 +70,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (!otp.trim() || otp.length !== 6) {
-      setError("Kripya 6-digit OTP code type karein.");
+      setError(lang === 'en' ? "Please enter a 6-digit OTP code." : "कृपया 6-अंकों का ओटीपी कोड दर्ज करें।");
       return;
     }
     setError(null);
@@ -82,7 +84,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       });
       const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || "OTP verification failed.");
+      if (!response.ok) throw new Error(data.error || (lang === 'en' ? "OTP verification failed." : "ओटीपी सत्यापन विफल रहा।"));
 
       localStorage.setItem('cctns_user', JSON.stringify(data.user));
       localStorage.setItem('cctns_token', data.token);
@@ -98,7 +100,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!regName.trim() || !regEmail.trim() || !regEmail.includes('@')) {
-      setError("Sabhi details valid format mein fill karein.");
+      setError(lang === 'en' ? "Please fill all details in a valid format." : "कृपया सभी विवरण वैध प्रारूप में भरें।");
       return;
     }
     setError(null);
@@ -117,7 +119,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       });
       const data = await response.json();
 
-      if (!response.ok) throw new Error(data.error || "Registration failed.");
+      if (!response.ok) throw new Error(data.error || (lang === 'en' ? "Registration failed." : "पंजीकरण विफल रहा।"));
 
       setSuccessMessage(data.message);
       
@@ -154,10 +156,36 @@ const LoginPage = ({ onLoginSuccess }) => {
         padding: '2.5rem',
         width: '100%',
         maxWidth: '460px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
         position: 'relative'
       }}>
         
+        {/* Language Switcher */}
+        <button 
+          onClick={toggleLang}
+          style={{
+            position: 'absolute',
+            top: '1.5rem',
+            right: '1.5rem',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-glow)',
+            color: 'var(--text-primary)',
+            padding: '0.35rem 0.75rem',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            transition: 'var(--transition)'
+          }}
+          onMouseEnter={(e) => e.target.style.borderColor = 'var(--primary)'}
+          onMouseLeave={(e) => e.target.style.borderColor = 'var(--border-glow)'}
+        >
+          🌐 {lang === 'en' ? 'हिन्दी' : 'English'}
+        </button>
+
         {/* Government Emblem Symbol */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div style={{ 
@@ -170,16 +198,16 @@ const LoginPage = ({ onLoginSuccess }) => {
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '2.25rem',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+            boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
           }}>
             🦁
           </div>
-          <span className="badge-gov">CCTNS SECURITY HUB</span>
+          <span className="badge-gov">{t.login.securityHub}</span>
           <h2 style={{ fontSize: '1.65rem', color: 'var(--text-primary)', marginTop: '0.5rem', fontFamily: 'Space Grotesk' }}>
-            {isRegistering ? 'Officer Registration' : 'Upgrade Command Center'}
+            {isRegistering ? t.login.officerRegister : t.login.mainTitle}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            {isRegistering ? 'Submit validation request for new officer account' : 'System logs and deployment board access dashboard'}
+            {isRegistering ? t.login.regSubTitle : t.login.subTitle}
           </p>
         </div>
 
@@ -189,7 +217,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             backgroundColor: 'var(--danger-glow)',
             border: '1px solid var(--danger)',
             borderRadius: 'var(--radius-sm)',
-            color: '#fca5a5',
+            color: 'var(--danger)',
             fontSize: '0.85rem',
             marginBottom: '1.25rem'
           }}>
@@ -203,7 +231,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             backgroundColor: 'var(--success-glow)',
             border: '1px solid var(--success)',
             borderRadius: 'var(--radius-sm)',
-            color: '#86efac',
+            color: 'var(--success)',
             fontSize: '0.85rem',
             marginBottom: '1.25rem'
           }}>
@@ -216,11 +244,11 @@ const LoginPage = ({ onLoginSuccess }) => {
           <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                Full Officer Name
+                {t.login.enterRegName}
               </label>
               <input 
                 type="text" 
-                placeholder="e.g. Constable Rajesh Kumar"
+                placeholder={t.login.placeholderName}
                 className="chat-input"
                 style={{ width: '100%' }}
                 value={regName}
@@ -231,7 +259,7 @@ const LoginPage = ({ onLoginSuccess }) => {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                Official Email Address
+                {t.login.enterRegEmail}
               </label>
               <input 
                 type="email" 
@@ -246,7 +274,7 @@ const LoginPage = ({ onLoginSuccess }) => {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                Requested Role
+                {t.login.requestedRole}
               </label>
               <select 
                 className="chat-input" 
@@ -254,13 +282,16 @@ const LoginPage = ({ onLoginSuccess }) => {
                 value={regRole}
                 onChange={(e) => setRegRole(e.target.value)}
               >
-                <option value="user">👮 Field Constable / User (Read-Only Board)</option>
-                <option value="admin">🔑 Command Center Admin / Admin (Full Access)</option>
+                <option value="user">{t.login.roleUser}</option>
+                <option value="admin">{t.login.roleAdmin}</option>
               </select>
             </div>
 
             <button type="submit" className="btn-calculate" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Submitting Registration...' : 'Register Account'}
+              {loading 
+                ? (lang === 'en' ? 'Submitting Registration...' : 'पंजीकरण सबमिट किया जा रहा है...') 
+                : t.login.btnRegister
+              }
             </button>
 
             <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
@@ -269,7 +300,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                 onClick={() => { setIsRegistering(false); setError(null); }}
                 style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline' }}
               >
-                Pehle se registered hai? Log In karein
+                {t.login.lnkLogin}
               </button>
             </div>
           </form>
@@ -280,7 +311,7 @@ const LoginPage = ({ onLoginSuccess }) => {
               <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    Enter Registered Email ID
+                    {t.login.enterEmail}
                   </label>
                   <input 
                     type="email" 
@@ -294,7 +325,10 @@ const LoginPage = ({ onLoginSuccess }) => {
                 </div>
 
                 <button type="submit" className="btn-calculate" style={{ width: '100%' }} disabled={loading}>
-                  {loading ? 'Dispatched OTP...' : 'Send Login OTP'}
+                  {loading 
+                    ? (lang === 'en' ? 'Dispatched OTP...' : 'ओटीपी भेजा जा चुका है...') 
+                    : t.login.btnSendOtp
+                  }
                 </button>
 
                 <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
@@ -303,14 +337,14 @@ const LoginPage = ({ onLoginSuccess }) => {
                     onClick={() => { setIsRegistering(true); setError(null); setSuccessMessage(null); }}
                     style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline' }}
                   >
-                    Naya Account register karein (Needs Approval)
+                    {t.login.lnkRegister}
                   </button>
                 </div>
 
                 {/* Quick Testing accounts filler */}
                 <div style={{ marginTop: '1rem', borderTop: '1px solid var(--bg-tertiary)', paddingTop: '1.25rem' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    DEFAULT APPROVED TESTING ACCOUNTS:
+                    {t.login.defaultAccounts}
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <button 
@@ -319,7 +353,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                       style={{ textAlign: 'left', width: '100%', justifyContent: 'space-between', display: 'flex' }}
                       onClick={() => handleQuickSelect('admin@cctns.gov.in')}
                     >
-                      <span>🔑 Admin (IPS Admin Master)</span>
+                      <span>{t.login.adminLabel}</span>
                       <span style={{ opacity: 0.6 }}>admin@cctns.gov.in</span>
                     </button>
                     <button 
@@ -328,7 +362,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                       style={{ textAlign: 'left', width: '100%', justifyContent: 'space-between', display: 'flex' }}
                       onClick={() => handleQuickSelect('user@cctns.gov.in')}
                     >
-                      <span>👮 User (Field Constable)</span>
+                      <span>{t.login.userLabel}</span>
                       <span style={{ opacity: 0.6 }}>user@cctns.gov.in</span>
                     </button>
                   </div>
@@ -337,13 +371,13 @@ const LoginPage = ({ onLoginSuccess }) => {
             ) : (
               <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ textAlign: 'center', backgroundColor: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>OTP Sent To:</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{t.login.otpSentTo}</span>
                   <div style={{ fontWeight: 'bold', color: 'var(--accent)', fontSize: '0.95rem' }}>{email}</div>
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    Enter 6-Digit OTP Code
+                    {t.login.enterOtp}
                   </label>
                   <input 
                     type="text" 
@@ -358,7 +392,10 @@ const LoginPage = ({ onLoginSuccess }) => {
                 </div>
 
                 <button type="submit" className="btn-calculate" style={{ width: '100%' }} disabled={loading}>
-                  {loading ? 'Verifying OTP...' : 'Verify OTP & Authorize'}
+                  {loading 
+                    ? (lang === 'en' ? 'Verifying OTP...' : 'ओटीपी सत्यापित किया जा रहा है...') 
+                    : t.login.btnVerify
+                  }
                 </button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -367,17 +404,17 @@ const LoginPage = ({ onLoginSuccess }) => {
                     onClick={() => setStep(1)} 
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}
                   >
-                    Change Email
+                    {t.login.lnkChangeEmail}
                   </button>
                   {timer > 0 ? (
-                    <span>Resend in {timer}s</span>
+                    <span>{t.login.resendIn} {timer}s</span>
                   ) : (
                     <button 
                       type="button" 
                       onClick={handleRequestOtp}
                       style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
                     >
-                      Resend OTP
+                      {t.login.btnResend}
                     </button>
                   )}
                 </div>
@@ -398,7 +435,7 @@ const LoginPage = ({ onLoginSuccess }) => {
           borderRadius: 'var(--radius-md)',
           padding: '1.25rem 1.75rem',
           maxWidth: '380px',
-          boxShadow: '0 12px 30px rgba(6, 182, 212, 0.25)',
+          boxShadow: '0 12px 30px rgba(6, 182, 212, 0.1)',
           animation: 'slideUp 0.3s ease-out',
           zIndex: 999
         }}>
@@ -430,7 +467,10 @@ const LoginPage = ({ onLoginSuccess }) => {
             {simulatedMailAlert.otp}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'center' }}>
-            This box mock simulates checking your mail dashboard. Click values above to log in.
+            {lang === 'en'
+              ? "This box simulates checking your mail. Click values above to copy."
+              : "यह बॉक्स ईमेल की जांच का अनुकरण करता है। प्रवेश करने के लिए ऊपर कोड देखें।"
+            }
           </div>
         </div>
       )}
