@@ -9,6 +9,31 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Root path handler to guide users to the frontend port (3000)
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>CCTNS 2.0 API Server</title>
+        <style>
+          body { font-family: 'Segoe UI', system-ui, sans-serif; text-align: center; padding: 50px; background: #f8fafc; color: #0f172a; }
+          a { display: inline-block; margin-top: 15px; color: #ffffff; background: #1e40af; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: background 0.2s; }
+          a:hover { background: #0284c7; }
+          .card { max-width: 500px; margin: auto; padding: 30px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h2 style="color: #1e40af; margin-bottom: 10px;">🚔 CCTNS 2.0 API Server</h2>
+          <p style="color: #334155;">Backend API server is running successfully on Port 5000.</p>
+          <p style="color: #64748b; font-size: 0.9rem;">To access the Command Center Dashboard, please navigate to the frontend port:</p>
+          <a href="http://localhost:3000">👉 Open Command Center Dashboard (Port 3000)</a>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
 const DATA_FILE = path.join(__dirname, 'challenges.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 

@@ -10,5 +10,17 @@
     "name": "Field Constable (Sharma)",
     "role": "user",
     "status": "approved"
+  },
+  {
+    "email": "vivek.impdoc@gmail.com",
+    "name": "vivek",
+    "role": "admin",
+    "status": "approved"
+  },
+  {
+    "email": "vivek.verma2018@gmail.com",
+    "name": "vivek",
+    "role": "user",
+    "status": "approved"
   }
 ]
