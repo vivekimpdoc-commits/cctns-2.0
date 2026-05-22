@@ -1,5 +1,11 @@
 [
   {
+    "email": "superadmin@cctns.gov.in",
+    "name": "CCTNS Super Administrator (IPS Director)",
+    "role": "superadmin",
+    "status": "approved"
+  },
+  {
     "email": "admin@cctns.gov.in",
     "name": "Command Center Admin (IPS)",
     "role": "admin",
