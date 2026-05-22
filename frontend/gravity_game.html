@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Breakout: Agent Zero</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #0b0c10; /* Dark sci-fi background */
+            color: #66fcf1; /* Neon cyan text */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+        }
+        canvas { 
+            background-color: #1f2833; 
+            border: 4px solid #45a29e; 
+            border-radius: 8px; 
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4); 
+            cursor: pointer;
+        }
+        h1 { 
+            margin-bottom: 5px; 
+            text-transform: uppercase; 
+            letter-spacing: 3px; 
+            text-shadow: 0 0 10px #66fcf1;
+        }
+        p { 
+            margin-bottom: 20px; 
+            color: #c5c6c7; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Agent Zero</h1>
+    <p>Press SPACEBAR (or Click/Tap Screen) to flip gravity!</p>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Agent Zero (The Player)
+        const player = {
+            x: 100, 
+            y: 200, 
+            width: 24, 
+            height: 24,
+            color: '#66fcf1', 
+            velocityY: 0, 
+            gravity: 0.6,
+            isFlipped: false
+        };
+
+        // Red Laser Traps (Obstacles)
+        let obstacles = [
+            { x: 800, y: 350, width: 40, height: 50, color: '#ff003c' },
+            { x: 1200, y: 0, width: 40, height: 50, color: '#ff003c' }
+        ];
+
+        let gameSpeed = 5;
+        let score = 0;
+        let isGameOver = false;
+
+        function update() {
+            if (isGameOver) return;
+
+            // Apply Gravity
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Floor & Ceiling Collisions
+            if (!player.isFlipped && player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.velocityY = 0;
+            } else if (player.isFlipped && player.y < 0) {
+                player.y = 0;
+                player.velocityY = 0;
+            }
+
+            // Move Obstacles
+            for (let obs of obstacles) {
+                obs.x -= gameSpeed;
+                
+                // Reset obstacle when it goes off screen
+                if (obs.x + obs.width < 0) {
+                    obs.x = canvas.width + Math.random() * 300;
+                    // 50% chance to spawn on top or bottom
+                    obs.y = Math.random() > 0.5 ? 0 : canvas.height - obs.height;
+                    score++;
+                    gameSpeed += 0.05; // Game gets slightly faster gradually
+                }
+
+                // Check Collision (Game Over)
+                if (player.x < obs.x + obs.width && player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height && player.y + player.height > obs.y) {
+                    isGameOver = true;
+                    setTimeout(() => {
+                        alert("Agent Zero Captured! Final Score: " + score + "\nClick OK to Restart.");
+                        resetGame();
+                    }, 50);
+                }
+            }
+        }
+
+        function resetGame() {
+            player.y = 200;
+            player.velocityY = 0;
+            player.isFlipped = false;
+            player.gravity = 0.6;
+            obstacles[0].x = 800;
+            obstacles[1].x = 1200;
+            gameSpeed = 5;
+            score = 0;
+            isGameOver = false;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Player with glow effect
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Draw Obstacles with danger glow
+            ctx.shadowColor = '#ff003c';
+            for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+
+            // Reset shadow for text
+            ctx.shadowBlur = 0;
+
+            // Draw Score
+            ctx.fillStyle = '#c5c6c7';
+            ctx.font = '20px "Segoe UI", sans-serif';
+            ctx.fillText("Score: " + score, 20, 30);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Gravity Flip Control function
+        function flipGravity() {
+            if (isGameOver) return;
+            player.isFlipped = !player.isFlipped;
+            player.gravity = player.isFlipped ? -0.6 : 0.6;
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                flipGravity();
+            }
+        });
+
+        // Touch/Click support for mobile/mouse
+        canvas.addEventListener('mousedown', flipGravity);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // prevent scrolling on touch
+            flipGravity();
+        });
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
